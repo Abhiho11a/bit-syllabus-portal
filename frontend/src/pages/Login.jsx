@@ -80,7 +80,7 @@ const FIELD_META = {
 };
 
 export default function Login() {
-//   const navigate       = useNavigate();
+  const navigate       = useNavigate();
 //   const { login }      = useAuth();
 
   const [selectedRole, setSelectedRole] = useState(null);

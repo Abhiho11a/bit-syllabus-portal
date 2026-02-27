@@ -1,7 +1,9 @@
-const express = require("express")
+const express = require("express");
+const { connectDb } = require("./services/db");
 require("dotenv").config()
 
 const app = express();
+connectDb()
 
 app.get("/",(req,res)=>{
     res.send("Hello from backend")
