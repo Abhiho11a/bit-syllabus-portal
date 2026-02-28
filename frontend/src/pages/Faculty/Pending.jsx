@@ -1,5 +1,5 @@
 // pages/faculty/Pending.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 // import { useAuth } from "../../context/AuthContext";
 import {
@@ -53,8 +53,25 @@ const user = JSON.parse(localStorage.getItem("user"))
   const [search, setSearch]           = useState("");
   const [semFilter, setSemFilter]     = useState("all");
 
-  const sems     = [...new Set(MOCK_PENDING.map(t => t.sem))].sort();
-  const filtered = MOCK_PENDING
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    fetch(`http://127.0.0.1:8000/api/v1/assignments?faculty_id=${user?.id}&status=pending`)
+    .then(r => r.json())
+    .then(data => {
+      setTasks(data.assignments);
+      setLoading(false);
+    })
+    .catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
+  
+
+const sems     = [...new Set(tasks.map(t => t.sem))].sort();
+const filtered = tasks
     .filter(t => semFilter === "all" || t.sem === Number(semFilter))
     .filter(t =>
       t.subject_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -101,9 +118,9 @@ const user = JSON.parse(localStorage.getItem("user"))
                                  ${active ? "bg-white/15 text-white" : "text-blue-200 hover:bg-white/8 hover:text-white"}`}>
                 <Icon size={16} strokeWidth={2} />
                 <span className="flex-1">{label}</span>
-                {label === "Pending Tasks" && MOCK_PENDING.length > 0 && (
+                {label === "Pending Tasks" && tasks.length > 0 && (
                   <span className="text-[10px] font-bold bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-full">
-                    {MOCK_PENDING.length}
+                    {tasks.length}
                   </span>
                 )}
               </button>
@@ -149,7 +166,7 @@ const user = JSON.parse(localStorage.getItem("user"))
           </div>
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
             <Clock size={13} className="text-amber-500" />
-            <span className="text-xs font-bold text-amber-600">{MOCK_PENDING.length} Pending</span>
+            <span className="text-xs font-bold text-amber-600">{tasks.length} Pending</span>
           </div>
         </header>
 
@@ -163,7 +180,7 @@ const user = JSON.parse(localStorage.getItem("user"))
             </div>
             <h2 className="text-2xl font-extrabold text-slate-800">Your Pending Tasks</h2>
             <p className="text-slate-400 text-sm mt-0.5">
-              {MOCK_PENDING.length} subject{MOCK_PENDING.length !== 1 ? "s" : ""} waiting for syllabus
+              {tasks.length} subject{tasks.length !== 1 ? "s" : ""} waiting for syllabus
             </p>
           </div>
 
@@ -239,16 +256,32 @@ const user = JSON.parse(localStorage.getItem("user"))
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-slate-500">
                           <Calendar size={11} className="text-slate-400" />
-                          {new Date(task.assigned_date).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
+                          {new Date(task.createdAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
                         </div>
                       </div>
 
                       <p className="text-xs text-slate-400 mb-4">
-                        Assigned by <span className="font-semibold text-slate-600">{task.assigned_by}</span>
+                        Assigned by <span className="font-semibold text-slate-600">{task.assigned_by?.name}</span>
                       </p>
 
                       <button
-                        onClick={() => navigate(`/faculty/syllabus/${task.id}`)}
+                        // onClick={() => navigate(`/faculty/syllabus/${task.id}`)}
+                        onClick={async() => 
+                        {
+                          fetch(`http://127.0.0.1:8000/api/v1/submit`,{method:"PATCH",headers: {
+        "Content-Type": "application/json",
+        // Authorization: `Bearer ${token}`   // if you’re using JWT middleware
+      },
+      body: JSON.stringify({
+        assignmentId:task._id,
+        pdf_url:null
+      })})
+                          .then(r => r.json())
+                          .then(data => {
+                            alert(data.message)
+                          })
+                        }
+                        }
                         className="w-full flex items-center justify-center gap-2
                                    bg-[#0f2744] text-white text-sm font-bold py-2.5 rounded-xl
                                    hover:bg-[#1e3a5f] transition-all hover:-translate-y-0.5 cursor-pointer"

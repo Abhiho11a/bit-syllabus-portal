@@ -1,22 +1,11 @@
-// pages/coordinator/Syllabi.jsx
-// Full list of submitted syllabi with filters + review actions
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-// import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard, FileText, LogOut, User,
   Menu, X, Users, Search, Eye,
-  CheckCircle, XCircle, Clock, Download
+  CheckCircle, XCircle, Clock, RefreshCw,
+  Send, AlertCircle
 } from "lucide-react";
-
-const MOCK_SYLLABI = [
-  { id:"s1", faculty_name:"Mrs. Priya Sharma", subject_code:"BCS300", subject_name:"Mathematics III",         sem:3, submitted_date:"2025-07-01", status:"submitted", pdf_url:"" },
-  { id:"s2", faculty_name:"Mr. Ravi Kumar",    subject_code:"BCS303", subject_name:"Operating Systems",       sem:3, submitted_date:"2025-07-03", status:"approved",  pdf_url:"https://example.com/pdf1" },
-  { id:"s3", faculty_name:"Dr. Suresh Naik",   subject_code:"CS501",  subject_name:"Computer Networks",      sem:5, submitted_date:"2025-07-05", status:"rejected",  pdf_url:"https://example.com/pdf2" },
-  { id:"s4", faculty_name:"Mrs. Priya Sharma", subject_code:"CS601",  subject_name:"Machine Learning",       sem:6, submitted_date:"2025-07-06", status:"submitted", pdf_url:"" },
-  { id:"s5", faculty_name:"Mr. Ravi Kumar",    subject_code:"CS401",  subject_name:"Analysis of Algorithms", sem:4, submitted_date:"2025-07-07", status:"approved",  pdf_url:"https://example.com/pdf3" },
-];
 
 const STATUS_META = {
   submitted: { label:"Under Review", color:"#2563eb", bg:"#eff6ff", border:"#bae6fd", icon: Clock       },
@@ -37,30 +26,117 @@ const NAV_LINKS = [
 ];
 
 export default function CoordinatorSyllabi() {
-  const navigate        = useNavigate();
-//   const { user, logout} = useAuth();
-const user = JSON.parse(localStorage.getItem("user"))
+  const navigate = useNavigate();
+  const user     = JSON.parse(localStorage.getItem("user"));
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab]     = useState("all");
   const [search, setSearch]           = useState("");
+  const [syllabi, setSyllabi]         = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState("");
+
+  // ── Reject modal state ───────────────────────────────────────
+  const [rejectModal, setRejectModal] = useState(null); // holds the syllabus being rejected
+  const [remark, setRemark]           = useState("");
+  const [submitting, setSubmitting]   = useState(false);
+
+  // ── Per-card action loading ──────────────────────────────────
+  const [actionLoading, setActionLoading] = useState({}); // { [id]: true }
+
+  useEffect(() => { fetchSyllabi(); }, []);
+
+  async function fetchSyllabi() {
+    setLoading(true); setError("");
+    try {
+      const res  = await fetch(
+        `http://127.0.0.1:8000/api/v1/assignments?department=${user?.department}`
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      setSyllabi((data.assignments || []).filter(a => a.status !== "pending"));
+    } catch (err) {
+      setError("Failed to load syllabi. Check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Approve directly ─────────────────────────────────────────
+  async function handleApprove(s) {
+    setActionLoading(l => ({ ...l, [s._id]:"approve" }));
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/v1/assignments/${s._id}/review`,
+        {
+          method:  "PATCH",
+          headers: { "Content-Type":"application/json" },
+          body:    JSON.stringify({ status:"approved", remark:"" }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      // update locally — no need to refetch
+      setSyllabi(prev => prev.map(a =>
+        a._id === s._id ? { ...a, status:"approved" } : a
+      ));
+    } catch (err) {
+      alert("Failed to approve: " + err.message);
+    } finally {
+      setActionLoading(l => ({ ...l, [s._id]:null }));
+    }
+  }
+
+  // ── Open reject modal ────────────────────────────────────────
+  function openRejectModal(s) {
+    setRejectModal(s);
+    setRemark("");
+  }
+
+  // ── Submit rejection ─────────────────────────────────────────
+  async function handleReject() {
+    if (!remark.trim()) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/v1/assignments/${rejectModal._id}/review`,
+        {
+          method:  "PATCH",
+          headers: { "Content-Type":"application/json" },
+          body:    JSON.stringify({ status:"rejected", remark }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setSyllabi(prev => prev.map(a =>
+        a._id === rejectModal._id ? { ...a, status:"rejected", remark } : a
+      ));
+      setRejectModal(null);
+      setRemark("");
+    } catch (err) {
+      alert("Failed to reject: " + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   function handleLogout() {
-    if (confirm("Log out?")) { 
-        // logout(); 
-        navigate("/login"); }
+    if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
   }
 
   const tabCount = (id) =>
-    id === "all" ? MOCK_SYLLABI.length : MOCK_SYLLABI.filter(s => s.status === id).length;
+    id === "all" ? syllabi.length : syllabi.filter(s => s.status === id).length;
 
-  const visible = MOCK_SYLLABI
+  const visible = syllabi
     .filter(s => activeTab === "all" || s.status === activeTab)
-    .filter(s =>
-      s.subject_name.toLowerCase().includes(search.toLowerCase()) ||
-      s.subject_code.toLowerCase().includes(search.toLowerCase()) ||
-      s.faculty_name.toLowerCase().includes(search.toLowerCase())
-    );
+    .filter(s => {
+      const q = search.toLowerCase();
+      return (
+        s.subject_name?.toLowerCase().includes(q) ||
+        s.subject_code?.toLowerCase().includes(q) ||
+        s.faculty_id?.name?.toLowerCase().includes(q)
+      );
+    });
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fb]"
@@ -115,7 +191,10 @@ const user = JSON.parse(localStorage.getItem("user"))
         </div>
       </aside>
 
-      {sidebarOpen && <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/40 z-40 md:hidden"
+             onClick={() => setSidebarOpen(false)} />
+      )}
 
       {/* MAIN */}
       <div className="flex-1 flex flex-col md:ml-64 min-w-0">
@@ -129,9 +208,13 @@ const user = JSON.parse(localStorage.getItem("user"))
             <h1 className="font-extrabold text-slate-800 text-base">Syllabi</h1>
             <p className="text-xs text-slate-400 hidden md:block">Bangalore Institute of Technology</p>
           </div>
+          <button onClick={fetchSyllabi} title="Refresh"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer">
+            <RefreshCw size={14} className={`text-slate-500 ${loading ? "animate-spin" : ""}`} />
+          </button>
           <div className="flex items-center gap-2 bg-teal-50 border border-teal-100 px-3 py-1.5 rounded-xl">
             <FileText size={13} className="text-teal-600" />
-            <span className="text-xs font-bold text-teal-700">{MOCK_SYLLABI.length} Total</span>
+            <span className="text-xs font-bold text-teal-700">{syllabi.length} Total</span>
           </div>
         </header>
 
@@ -142,7 +225,7 @@ const user = JSON.parse(localStorage.getItem("user"))
               <span className="text-xs font-bold text-teal-500 uppercase tracking-widest">Review Queue</span>
             </div>
             <h2 className="text-2xl font-extrabold text-slate-800">All Submitted Syllabi</h2>
-            <p className="text-slate-400 text-sm mt-0.5">Review, approve or reject faculty-submitted syllabi</p>
+            <p className="text-slate-400 text-sm mt-0.5">Review and approve or reject faculty syllabi</p>
           </div>
 
           {/* Tabs + search */}
@@ -170,22 +253,61 @@ const user = JSON.parse(localStorage.getItem("user"))
             </div>
           </div>
 
-          {/* Cards grid */}
-          {visible.length === 0 ? (
+          {/* Loading skeletons */}
+          {loading && (
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {[1,2,3].map(i => (
+                <div key={i} className="bg-white rounded-2xl border border-slate-100 p-5 animate-pulse">
+                  <div className="h-1.5 bg-slate-100 rounded mb-4" />
+                  <div className="flex gap-3 mb-4">
+                    <div className="w-10 h-10 bg-slate-100 rounded-xl" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 bg-slate-100 rounded w-3/4" />
+                      <div className="h-2.5 bg-slate-100 rounded w-1/2" />
+                    </div>
+                  </div>
+                  <div className="h-8 bg-slate-100 rounded-xl" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Error */}
+          {!loading && error && (
+            <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
+              <XCircle size={32} className="mx-auto text-red-300 mb-2" />
+              <p className="font-bold text-red-700 text-sm">{error}</p>
+              <button onClick={fetchSyllabi}
+                      className="mt-3 px-4 py-2 bg-red-600 text-white text-xs font-bold
+                                 rounded-xl hover:bg-red-700 cursor-pointer">Retry</button>
+            </div>
+          )}
+
+          {/* Empty */}
+          {!loading && !error && visible.length === 0 && (
             <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center shadow-sm">
               <FileText size={40} className="mx-auto mb-3 opacity-20" />
-              <p className="font-semibold text-sm text-slate-400">No syllabi found</p>
+              <p className="font-bold text-slate-700">
+                {syllabi.length === 0 ? "No syllabi submitted yet" : "No syllabi match your filter"}
+              </p>
             </div>
-          ) : (
+          )}
+
+          {/* Cards */}
+          {!loading && !error && visible.length > 0 && (
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
               {visible.map(s => {
-                const meta = STATUS_META[s.status];
-                const Icon = meta.icon;
+                const meta    = STATUS_META[s.status] || STATUS_META.submitted;
+                const Icon    = meta.icon;
+                const faculty = s.faculty_id;
+                const busy    = actionLoading[s._id];
+
                 return (
-                  <div key={s.id}
+                  <div key={s._id}
                        className="bg-white rounded-2xl border border-slate-100 shadow-sm
-                                  overflow-hidden hover:shadow-md hover:-translate-y-1 transition-all duration-200">
-                    {/* top stripe */}
+                                  overflow-hidden hover:shadow-md hover:-translate-y-0.5
+                                  transition-all duration-200">
+                    {/* stripe */}
                     <div className="h-1.5" style={{
                       background: s.status === "approved"
                         ? "linear-gradient(90deg,#34d399,#059669)"
@@ -203,9 +325,7 @@ const user = JSON.parse(localStorage.getItem("user"))
                             <FileText size={16} className="text-teal-500" />
                           </div>
                           <div>
-                            <h3 className="font-bold text-slate-800 text-sm leading-snug">
-                              {s.subject_name}
-                            </h3>
+                            <h3 className="font-bold text-slate-800 text-sm">{s.subject_name}</h3>
                             <span className="font-mono text-xs text-slate-400">{s.subject_code}</span>
                           </div>
                         </div>
@@ -216,53 +336,83 @@ const user = JSON.parse(localStorage.getItem("user"))
                         </span>
                       </div>
 
-                      {/* meta */}
-                      <p className="text-xs text-slate-500 mb-1">
-                        <span className="font-semibold text-slate-700">Faculty:</span> {s.faculty_name}
+                      <p className="text-xs text-slate-500 mb-0.5">
+                        <span className="font-semibold text-slate-700">Faculty: </span>
+                        {faculty?.name || "—"}
                       </p>
                       <p className="text-xs text-slate-400 mb-4">
                         Sem {s.sem} ·{" "}
-                        {new Date(s.submitted_date).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
+                        {new Date(s.submitted_at || s.createdAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
                       </p>
 
-                      {/* Actions */}
+                      {/* rejection remark */}
+                      {s.status === "rejected" && s.remark && (
+                        <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 mb-3 flex gap-2">
+                          <XCircle size={13} className="text-red-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-[10px] font-bold text-red-500 mb-0.5">Remark sent</p>
+                            <p className="text-xs text-red-700 line-clamp-2">{s.remark}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── ACTION BUTTONS ────────────────────── */}
                       <div className="flex gap-2">
-                        {/* View PDF — only if pdf_url exists */}
+                        {/* PDF button */}
                         {s.pdf_url ? (
-                          <button
-                            onClick={() => window.open(s.pdf_url, "_blank")}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold
-                                       bg-slate-100 border border-slate-200 text-slate-600
-                                       hover:bg-slate-200 transition-colors cursor-pointer"
-                          >
+                          <button onClick={() => window.open(s.pdf_url, "_blank")}
+                                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs
+                                             font-bold bg-slate-100 border border-slate-200 text-slate-600
+                                             hover:bg-slate-200 transition-colors cursor-pointer flex-shrink-0">
                             <Eye size={12} /> PDF
                           </button>
                         ) : (
-                          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold
-                                          bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed">
+                          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs
+                                          font-bold bg-slate-50 border border-slate-100 text-slate-300
+                                          cursor-not-allowed flex-shrink-0">
                             <Eye size={12} /> No PDF
                           </div>
                         )}
 
-                        {/* Review button — only for submitted */}
+                        {/* Approve + Reject — only for under review */}
                         {s.status === "submitted" ? (
-                          <button
-                            onClick={() => navigate(`/coordinator/syllabi/${s.id}`)}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl
-                                       text-xs font-bold bg-[#0f2744] text-white
-                                       hover:bg-[#1e3a5f] transition-all cursor-pointer hover:-translate-y-0.5"
-                          >
-                            Review & Decide
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleApprove(s)}
+                              disabled={!!busy}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2
+                                         rounded-xl text-xs font-bold text-white transition-all
+                                         cursor-pointer hover:-translate-y-0.5 disabled:opacity-60
+                                         disabled:cursor-not-allowed"
+                              style={{ background:"#059669" }}
+                            >
+                              {busy === "approve"
+                                ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                : <><CheckCircle size={12} /> Approve</>
+                              }
+                            </button>
+                            <button
+                              onClick={() => openRejectModal(s)}
+                              disabled={!!busy}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2
+                                         rounded-xl text-xs font-bold text-white transition-all
+                                         cursor-pointer hover:-translate-y-0.5 disabled:opacity-60
+                                         disabled:cursor-not-allowed"
+                              style={{ background:"#dc2626" }}
+                            >
+                              <XCircle size={12} /> Reject
+                            </button>
+                          </>
                         ) : (
-                          <button
-                            onClick={() => navigate(`/coordinator/syllabi/${s.id}`)}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl
-                                       text-xs font-bold border border-slate-200 text-slate-600
-                                       hover:bg-slate-50 transition-all cursor-pointer"
-                          >
-                            View Details
-                          </button>
+                          /* Already decided — show greyed label */
+                          <div className="flex-1 flex items-center justify-center gap-1.5 py-2
+                                          rounded-xl text-xs font-bold border border-slate-100
+                                          text-slate-400 bg-slate-50">
+                            {s.status === "approved"
+                              ? <><CheckCircle size={12} className="text-green-400" /> Approved</>
+                              : <><XCircle    size={12} className="text-red-400"   /> Rejected</>
+                            }
+                          </div>
                         )}
                       </div>
                     </div>
@@ -273,6 +423,92 @@ const user = JSON.parse(localStorage.getItem("user"))
           )}
         </main>
       </div>
+
+      {/* ══ REJECT MODAL ═════════════════════════════════════════ */}
+      {rejectModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+             style={{ background:"rgba(0,0,0,0.5)", backdropFilter:"blur(8px)",
+                      animation:"fadeIn .15s ease" }}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+               style={{ animation:"slideUp .2s ease" }}>
+
+            {/* Modal header */}
+            <div className="px-6 pt-6 pb-5 relative"
+                 style={{ background:"linear-gradient(135deg,#fef2f2,white)" }}>
+              <button onClick={() => setRejectModal(null)}
+                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100
+                                 flex items-center justify-center hover:bg-slate-200 cursor-pointer">
+                <X size={14} className="text-slate-500" />
+              </button>
+              <div className="w-12 h-12 rounded-2xl bg-red-100 border border-red-200
+                              flex items-center justify-center mb-3">
+                <XCircle size={22} className="text-red-600" />
+              </div>
+              <h2 className="text-xl font-extrabold text-slate-800">Reject Syllabus</h2>
+              <p className="text-sm text-slate-500 mt-0.5">
+                <span className="font-semibold text-slate-700">{rejectModal.subject_name}</span>
+                {" · "}{rejectModal.faculty_id?.name}
+              </p>
+            </div>
+
+            <div className="px-6 py-5">
+              {/* Remark input */}
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Remark for Faculty *
+              </label>
+              <textarea
+                rows={4}
+                value={remark}
+                onChange={e => setRemark(e.target.value)}
+                placeholder="Tell the faculty exactly what needs to be fixed…"
+                autoFocus
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3
+                           text-sm text-slate-800 outline-none resize-none transition-all
+                           focus:border-red-300 focus:ring-2 focus:ring-red-50 focus:bg-white
+                           placeholder:text-slate-300"
+              />
+
+              {/* Warning if empty */}
+              {!remark.trim() && (
+                <div className="flex items-center gap-2 mt-2">
+                  <AlertCircle size={12} className="text-amber-500 flex-shrink-0" />
+                  <p className="text-xs text-amber-600">
+                    Faculty needs to know what to fix — remark is required.
+                  </p>
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => setRejectModal(null)}
+                        className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm
+                                   font-bold text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReject}
+                  disabled={!remark.trim() || submitting}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white
+                             flex items-center justify-center gap-2 transition-all cursor-pointer
+                             disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
+                  style={{ background: remark.trim() ? "#dc2626" : "#94a3b8",
+                           boxShadow:  remark.trim() ? "0 6px 20px #dc262633" : "none" }}
+                >
+                  {submitting
+                    ? <><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />Sending…</>
+                    : <><Send size={14} />Send to Faculty</>
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(20px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+      `}</style>
     </div>
   );
 }

@@ -136,6 +136,111 @@ app.post("/api/v1/assignments",async(req,res) => {
   }
 })
 
+
+//FACULTY requests
+app.get("/api/v1/assignments",async(req,res) => {
+  try {
+    const { faculty_id, status, department } = req.query;
+
+    const query = {};
+    if (faculty_id)  query.faculty_id  = faculty_id;
+    if (status)      query.status      = status;
+    if (department)  query.department  = department.toUpperCase();
+
+    const assignments = await Assignment
+      .find(query)
+      .populate("assigned_by", "name department")  // get BOS name
+      .populate("faculty_id",  "name subject_code") // get faculty name
+      .sort({ createdAt: -1 });                     // newest first
+      // console.log(assignments)
+
+    return res.status(200).json({
+      status: "Success",
+      count:  assignments.length,
+      assignments,
+    });
+
+  } catch (err) {
+    console.error("[GET /assignments]", err);
+    return res.status(500).json({ message: "Server error." });
+  }
+})
+
+app.patch("/api/v1/submit",async(req,res)=>{
+  try {
+    const { assignmentId, pdf_url } = req.body;
+
+    if (!assignmentId) {
+      return res.status(400).json({ message: "assignmentId is required." });
+    }
+
+    const assignment = await Assignment.findByIdAndUpdate(
+      assignmentId,
+      {
+        status:       "submitted",
+        pdf_url:      pdf_url || null,
+        submitted_at: new Date(),
+      },
+      { new: true }
+    );
+
+    if (!assignment) {
+      return res.status(404).json({ message: "Assignment not found." });
+    }
+
+    return res.status(200).json({
+      status:  "Success",
+      message: "Syllabus submitted successfully.",
+      assignment,
+    });
+
+  } catch (err) {
+    console.error("[PATCH /assignments/submit]", err);
+    return res.status(500).json({ message: "Server error." });
+  }
+})
+
+//COORDINATOR requests
+// PATCH /api/v1/assignments/:id/review
+app.patch("/api/v1/assignments/:id/review", async (req, res) => {
+  try {
+    const { status, remark } = req.body;
+
+    if (!["approved", "rejected"].includes(status)) {
+      return res.status(400).json({ message: "Status must be 'approved' or 'rejected'." });
+    }
+
+    if (status === "rejected" && !remark?.trim()) {
+      return res.status(400).json({ message: "Remark is required when rejecting." });
+    }
+
+    const assignment = await Assignment.findById(req.params.id);
+
+    if (!assignment) {
+      return res.status(404).json({ message: "Assignment not found." });
+    }
+    if (assignment.status !== "submitted") {
+      return res.status(400).json({
+        message: `Cannot review — current status is '${assignment.status}'.`
+      });
+    }
+
+    assignment.status = status;
+    assignment.remark = remark?.trim() || "";
+    await assignment.save();
+
+    return res.status(200).json({
+      status:  "Success",
+      message: `Syllabus ${status} successfully.`,
+      assignment,
+    });
+
+  } catch (err) {
+    console.error("[PATCH /assignments/:id/review]", err);
+    return res.status(500).json({ message: "Server error." });
+  }
+});
+
 const PORT = process.env.PORT
 app.listen(PORT,"127.0.0.1",()=>{
     console.log(`Listening to the PORT:${PORT}\nhttp://127.0.0.1:${PORT}/`)
