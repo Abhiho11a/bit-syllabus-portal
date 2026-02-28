@@ -1,7 +1,7 @@
 // pages/bos/Assign.jsx
 // Full page form to assign syllabus to a faculty member
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 // import { useAuth } from "../../context/AuthContext";
 import {
@@ -34,8 +34,15 @@ const user = JSON.parse(localStorage.getItem("user"))
   const [form, setForm] = useState({
     faculty_id: "", subject_code: "", subject_name: "", sem: ""
   });
+  const [facultyList,setFacultyList] = useState([])
 
   const setF = (k) => (v) => setForm(f => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+  fetch(`http://localhost:8000/api/v1/users?role=faculty&department=${user?.department}`)
+    .then(r => r.json())
+    .then(data => setFacultyList(data.users));
+}, []);
 
   function handleLogout() {
     if (confirm("Log out?")) { 
@@ -44,22 +51,55 @@ const user = JSON.parse(localStorage.getItem("user"))
   }
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    if (!form.faculty_id || !form.subject_code || !form.subject_name || !form.sem) {
-      alert("Please fill all fields"); return;
-    }
-    // console.log(form)
-    setLoading(true);
-    // TODO: await fetch('/api/v1/assignments', { method:'POST', body: JSON.stringify({ ...form, department: user?.department, assigned_by: user?._id }) })
-    await new Promise(r => setTimeout(r, 900));
-    setLoading(false);
-    setSubmitted(true);
+  e.preventDefault();
+
+  if (!form.faculty_id || !form.subject_code || !form.subject_name || !form.sem) {
+    alert("Please fill all fields");
+    return;
   }
 
-  function assignAnother() {
-    setForm({ faculty_id:"", subject_code:"", subject_name:"", sem:"" });
-    setSubmitted(false);
+  setLoading(true);
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/api/v1/assignments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Authorization: `Bearer ${token}`   // if you’re using JWT middleware
+      },
+      body: JSON.stringify({
+        faculty_id: "69a1bc39f7343a0c32b4cf34",
+        subject_code: form.subject_code,
+        subject_name: form.subject_name,
+        sem: form.sem,
+        department: user?.department,
+        assigned_by: user?.id
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Something went wrong");
+      return;
+    }
+
+    alert(data.message);
+    setSubmitted(true);
+
+  } catch (err) {
+    alert("Server error");
+    console.error(err);
+  } finally {
+    setLoading(false);
   }
+}
+
+
+function assignAnother() {
+setForm({ faculty_id:"", subject_code:"", subject_name:"", sem:"" });
+setSubmitted(false);
+}
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fb]"
@@ -160,7 +200,7 @@ const user = JSON.parse(localStorage.getItem("user"))
                   {form.subject_code} · {form.subject_name} · Sem {form.sem}
                 </p>
                 <div className="flex gap-3 w-full">
-                  <button onClick={assignAnother}
+                  <button onClick={()=>assignAnother()}
                           className="flex-1 py-3 rounded-xl bg-[#0f2744] text-white text-sm font-bold
                                      hover:bg-[#1e3a5f] transition-all cursor-pointer hover:-translate-y-0.5">
                     Assign Another
@@ -201,7 +241,7 @@ const user = JSON.parse(localStorage.getItem("user"))
                                        text-sm text-slate-800 outline-none focus:border-purple-400
                                        focus:ring-2 focus:ring-purple-50 transition-all cursor-pointer">
                       <option value="">Choose faculty member…</option>
-                      {MOCK_FACULTY.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      {facultyList && facultyList.map(f => <option key={f.id} value={f._id}>{f.name}</option>)}
                     </select>
                   </div>
 
