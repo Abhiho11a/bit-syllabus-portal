@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs"
 const UserSchema = new mongoose.Schema(
   {
     // ── Common fields (all roles) ────────────────────────────────
@@ -61,7 +62,7 @@ const UserSchema = new mongoose.Schema(
     // bos      → created by dean
     // dean, coordinator → created by admin
     created_by: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
     },
@@ -72,12 +73,11 @@ const UserSchema = new mongoose.Schema(
 );
 
 // ── Hash password before saving ──────────────────────────────────
-UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
+UserSchema.pre("save", async function () {
+    if (!this.isModified("password")) return;
+    this.password = await bcrypt.hash(this.password, 12);
 });
 
 const User = mongoose.model("User",UserSchema)
 
-export default {User}
+export default User

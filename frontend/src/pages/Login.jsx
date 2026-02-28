@@ -81,7 +81,6 @@ const FIELD_META = {
 
 export default function Login() {
   const navigate       = useNavigate();
-//   const { login }      = useAuth();
 
   const [selectedRole, setSelectedRole] = useState(null);
   const [form, setForm]   = useState({});
@@ -117,15 +116,25 @@ export default function Login() {
     setLoading(true);
     setError("");
     try {
-      const data = await api.verifyRole(role.id, {
-        name:         form.name,
-        email:        form.email,
-        password:     form.password,
-        subjectCode:  form.subject_code,
-        department:   form.department,
-      });
-      login(data.user);
+      const response = await fetch("http://127.0.0.1:8000/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,                        // name, email, department, subject_code, password
+          role: selectedRole,             // the selected role id
+        })
+      })
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message);
+        return;
+      }
+
+      // login(data.user);
       navigate(role.redirect);
+      localStorage.setItem("user",JSON.stringify(data.user))
     } catch (err) {
       setError(err.message || "Login failed. Please check your credentials.");
     } finally {
