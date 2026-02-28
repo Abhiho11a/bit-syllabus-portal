@@ -9,6 +9,8 @@ import BosDashboard from "./pages/Bos/dashboard"
 import BosAssign from "./pages/Bos/Assign"
 import BosAssignments from "./pages/Bos/Assignments"
 import BosFaculty from "./pages/Bos/ManageFaculty"
+import CoordinatorDashboard from "./pages/Coordinator/Dashboard"
+import CoordinatorSyllabi from "./pages/Coordinator/Syllabi"
 export default function App(){
   return(
     <div>
@@ -27,6 +29,10 @@ export default function App(){
         <Route path="/bos/assign" element={<BosAssign/>}/>
         <Route path="/bos/assignments" element={<BosAssignments/>}/>
         <Route path="/bos/faculty" element={<BosFaculty/>}/>
+
+        {/*  */}
+        <Route path="/coordinator/dashboard" element={<CoordinatorDashboard/>}/>
+        <Route path="/coordinator/syllabi" element={<CoordinatorSyllabi/>}/>
       </Routes>
     
     </div>
