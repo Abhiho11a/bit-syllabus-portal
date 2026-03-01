@@ -8,6 +8,7 @@ import {
   User, Menu, X, ShieldCheck, Search,
   UserPlus, CheckCircle, AlertCircle, Send, Trash2
 } from "lucide-react";
+import { useEffect } from "react";
 
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/admin/dashboard",  icon: LayoutDashboard },
@@ -26,16 +27,7 @@ const ROLE_META = {
   admin:       { color:"#dc2626", bg:"#fef2f2" },
 };
 
-const MOCK_USERS = [
-  { _id:"u1", name:"Mrs. Priya Sharma", role:"faculty",     department:"CSE",   subject_code:"CS601",  is_active:true  },
-  { _id:"u2", name:"Mr. Ravi Kumar",    role:"faculty",     department:"CSE",   subject_code:"BCS303", is_active:true  },
-  { _id:"u3", name:"Prof. Anitha Rao",  role:"bos",         department:"CSE",   subject_code:"",       is_active:true  },
-  { _id:"u4", name:"Dr. Ramesh Babu",   role:"bos",         department:"ISE",   subject_code:"",       is_active:true  },
-  { _id:"u5", name:"Dr. Suresh Naik",   role:"coordinator", department:"CSE",   subject_code:"",       is_active:true  },
-  { _id:"u6", name:"Prof. Kavya Shetty",role:"coordinator", department:"ECE",   subject_code:"",       is_active:false },
-  { _id:"u7", name:"Dr. Anand Verma",   role:"dean",        department:"",      subject_code:"",       is_active:true  },
-  { _id:"u8", name:"System Admin",      role:"admin",       department:"",      subject_code:"",       is_active:true  },
-];
+
 
 const BLANK = { name:"", role:"faculty", department:"", subject_code:"", password:"" };
 
@@ -44,7 +36,7 @@ export default function AdminUsers() {
   const user     = JSON.parse(localStorage.getItem("user"));
 
   const [sidebarOpen, setSidebarOpen]   = useState(false);
-  const [users,       setUsers]         = useState(MOCK_USERS);
+  const [users,       setUsers]         = useState([]);
   const [search,      setSearch]        = useState("");
   const [roleFilter,  setRoleFilter]    = useState("all");
   const [showAdd,     setShowAdd]       = useState(false);
@@ -52,6 +44,25 @@ export default function AdminUsers() {
   const [adding,      setAdding]        = useState(false);
 
   const setF = (k) => (v) => setForm(f => ({ ...f, [k]:v }));
+
+  useEffect(()=>{
+      fetchAllUsers();
+    },[])
+  
+    async function fetchAllUsers(){
+      const response = await fetch("http://127.0.0.1:8000/api/v1/allusers")
+  
+      const data = await response.json();
+  
+      if(!response.ok)
+          alert(data.message)
+      else
+      {
+          alert("All users fetched")
+          console.log(data)
+          setUsers(data.users)
+      }
+    }
 
   function handleLogout() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
@@ -295,14 +306,14 @@ export default function AdminUsers() {
               </div>
 
               {/* Subject code — only for faculty */}
-              {needsSubject && (
+              {/* {needsSubject && (
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Subject Code</label>
                   <input value={form.subject_code} onChange={e => setF("subject_code")(e.target.value.toUpperCase())}
                          placeholder="e.g. CS601"
                          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-mono text-slate-800 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-50 transition-all placeholder:text-slate-300" />
                 </div>
-              )}
+              )} */}
 
               {/* Password */}
               <div>

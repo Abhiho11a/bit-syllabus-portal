@@ -288,6 +288,17 @@ app.post("/api/v1/bos",async(req,res) => {
 }
 })
 
+//ADMIN requests
+app.get("/api/v1/allusers",async(req,res) => {
+  try{
+    const data = await User.find()
+    res.status(200).json({status:"Success",message:"All users fetched",users:data})
+  }catch(err){
+  res.status(500).json({status:"Fail",message:err.message})
+}
+
+})
+
 const PORT = process.env.PORT
 app.listen(PORT,"127.0.0.1",()=>{
     console.log(`Listening to the PORT:${PORT}\nhttp://127.0.0.1:${PORT}/`)

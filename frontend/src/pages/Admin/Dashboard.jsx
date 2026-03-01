@@ -7,30 +7,13 @@ import {
   GraduationCap, BookOpen, FileText,
   ArrowRight, TrendingUp, CheckCircle
 } from "lucide-react";
+import { useEffect } from "react";
+import { useMemo } from "react";
 
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/admin/dashboard",   icon: LayoutDashboard },
   { label:"Users",       path:"/admin/users",        icon: Users           },
   { label:"Departments", path:"/admin/departments",  icon: Building2       },
-];
-
-const MOCK_STATS = {
-  totalUsers:   24,
-  faculty:       8,
-  bos:           5,
-  coordinator:   5,
-  dean:          1,
-  admin:         2,
-  departments:   5,
-  totalSyllabi: 40,
-  approved:     18,
-};
-
-const MOCK_RECENT_USERS = [
-  { id:"u1", name:"Mrs. Priya Sharma", role:"faculty",     department:"CSE",   added:"2025-07-01" },
-  { id:"u2", name:"Prof. Anitha Rao",  role:"bos",         department:"CSE",   added:"2025-06-28" },
-  { id:"u3", name:"Dr. Ramesh Babu",   role:"coordinator", department:"ISE",   added:"2025-06-25" },
-  { id:"u4", name:"Dr. Suresh Naik",   role:"faculty",     department:"ECE",   added:"2025-06-20" },
 ];
 
 const ROLE_META = {
@@ -45,16 +28,50 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const user     = JSON.parse(localStorage.getItem("user"));
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [users,setUsers] = useState([])
+
+  useEffect(()=>{
+    fetchAllUsers();
+  },[])
+
+  async function fetchAllUsers(){
+    const response = await fetch("http://127.0.0.1:8000/api/v1/allusers")
+
+    const data = await response.json();
+
+    if(!response.ok)
+        alert(data.message)
+    else
+    {
+        alert("All users fetched")
+        console.log(data)
+        setUsers(data.users)
+    }
+  }
+
+  const stats = useMemo(() => {
+    const byRole = (role) => users.filter(u => u.role === role).length;
+    const depts  = new Set(users.map(u => u.department).filter(Boolean));
+    return {
+      totalUsers:  users.length,
+      faculty:     byRole("faculty"),
+      bos:         byRole("bos"),
+      coordinator: byRole("coordinator"),
+      dean:        byRole("dean"),
+      admin:       byRole("admin"),
+      departments: depts.size,
+    };
+  }, [users]);
 
   function handleLogout() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
   }
 
   const ROLE_CARDS = [
-    { label:"Faculty",     value: MOCK_STATS.faculty,     color:"#2563eb", bg:"#eff6ff", border:"#bae6fd", icon: GraduationCap },
-    { label:"BOS",         value: MOCK_STATS.bos,         color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe", icon: BookOpen      },
-    { label:"Coordinator", value: MOCK_STATS.coordinator, color:"#0f766e", bg:"#f0fdfa", border:"#99f6e4", icon: Users         },
-    { label:"Dean",        value: MOCK_STATS.dean,        color:"#d97706", bg:"#fffbeb", border:"#fcd34d", icon: ShieldCheck   },
+    { label:"Faculty",     value: stats.faculty,     color:"#2563eb", bg:"#eff6ff", border:"#bae6fd", icon: GraduationCap },
+    { label:"BOS",         value: stats.bos,         color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe", icon: BookOpen      },
+    { label:"Coordinator", value: stats.coordinator, color:"#0f766e", bg:"#f0fdfa", border:"#99f6e4", icon: Users         },
+    { label:"Dean",        value: stats.dean,        color:"#d97706", bg:"#fffbeb", border:"#fcd34d", icon: ShieldCheck   },
   ];
 
   return (
@@ -125,16 +142,16 @@ export default function AdminDashboard() {
               Welcome, {user?.name?.split(" ")[0] || "Admin"} 👋
             </h2>
             <p className="text-rose-200 text-sm mb-5">
-              Managing <span className="font-bold text-white">{MOCK_STATS.totalUsers} users</span> across{" "}
-              <span className="font-bold text-white">{MOCK_STATS.departments} departments</span>
+              Managing <span className="font-bold text-white">{stats.totalUsers} users</span> across{" "}
+              <span className="font-bold text-white">{stats.departments} departments</span>
             </p>
 
             {/* System health */}
             <div className="flex gap-4 mb-5">
               {[
-                { label:"Total Users",   val: MOCK_STATS.totalUsers  },
-                { label:"Departments",   val: MOCK_STATS.departments },
-                { label:"Syllabi",       val: MOCK_STATS.totalSyllabi},
+                { label:"Total Users",   val: stats.totalUsers  },
+                { label:"Departments",   val: stats.departments },
+                { label:"Syllabi",       val: stats.totalSyllabi},
               ].map(s => (
                 <div key={s.label} className="bg-white/10 border border-white/20 rounded-xl px-4 py-3">
                   <p className="text-2xl font-extrabold text-white">{s.val}</p>
@@ -187,7 +204,7 @@ export default function AdminDashboard() {
               </button>
             </div>
             <div className="divide-y divide-slate-50">
-              {MOCK_RECENT_USERS.map(u => {
+              {users?.map(u => {
                 const meta = ROLE_META[u.role] || ROLE_META.faculty;
                 return (
                   <div key={u.id} className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors">
