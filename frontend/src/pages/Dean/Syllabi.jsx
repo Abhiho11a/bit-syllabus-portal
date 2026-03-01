@@ -33,44 +33,66 @@ const TABS = [
 
 const DEPTS = ["All", "CSE", "ISE", "ECE", "MECH", "CIVIL"];
 
-// Mock — replace with GET /api/v1/assignments (no dept filter — dean sees all)
-const MOCK_SYLLABI = [
-  { _id:"s1", subject_name:"Machine Learning",        subject_code:"CS601",  department:"CSE",   sem:6, faculty_id:{name:"Mrs. Priya Sharma"}, status:"submitted", pdf_url:"",    remark:"" },
-  { _id:"s2", subject_name:"Computer Networks",       subject_code:"CS501",  department:"ISE",   sem:5, faculty_id:{name:"Mr. Ravi Kumar"},    status:"approved",  pdf_url:"https://example.com/pdf1", remark:"" },
-  { _id:"s3", subject_name:"Data Structures",         subject_code:"CS301",  department:"ECE",   sem:3, faculty_id:{name:"Dr. Suresh Naik"},   status:"rejected",  pdf_url:"",    remark:"Incomplete module 3" },
-  { _id:"s4", subject_name:"Operating Systems",       subject_code:"BCS303", department:"CSE",   sem:3, faculty_id:{name:"Ms. Deepa Rao"},     status:"submitted", pdf_url:"",    remark:"" },
-  { _id:"s5", subject_name:"Digital Electronics",     subject_code:"EC301",  department:"ECE",   sem:3, faculty_id:{name:"Mr. Anand Kumar"},   status:"approved",  pdf_url:"",    remark:"" },
-  { _id:"s6", subject_name:"Engineering Mathematics", subject_code:"MA101",  department:"MECH",  sem:1, faculty_id:{name:"Dr. Rekha Nair"},    status:"submitted", pdf_url:"",    remark:"" },
-];
-
 export default function DeanSyllabi() {
   const navigate = useNavigate();
   const user     = JSON.parse(localStorage.getItem("user"));
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [syllabi,     setSyllabi]     = useState(MOCK_SYLLABI);
-  const [loading,     setLoading]     = useState(false);
-  const [activeTab,   setActiveTab]   = useState("all");
-  const [deptFilter,  setDeptFilter]  = useState("All");
-  const [search,      setSearch]      = useState("");
+  const [sidebarOpen,   setSidebarOpen]   = useState(false);
+  const [syllabi,       setSyllabi]       = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState("");
+  const [activeTab,     setActiveTab]     = useState("all");
+  const [deptFilter,    setDeptFilter]    = useState("All");
+  const [search,        setSearch]        = useState("");
   const [actionLoading, setActionLoading] = useState({});
+  const [depts,         setDepts]         = useState(["All"]);
 
   // Reject modal
   const [rejectModal, setRejectModal] = useState(null);
   const [remark,      setRemark]      = useState("");
   const [submitting,  setSubmitting]  = useState(false);
 
+  useEffect(() => { 
+    fetchSyllabi(); 
+  }, []);
+
+  async function fetchSyllabi() {
+    setLoading(true); setError("");
+    try {
+      // No dept filter — dean sees all assignments
+      const res  = await fetch("http://127.0.0.1:8000/api/v1/assignments");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed");
+
+      // Exclude pending — nothing to review yet
+      const filtered = (data.assignments || []).filter(a => a.status !== "pending");
+      setSyllabi(filtered);
+
+      // Build dept filter buttons dynamically from real data
+      const uniqueDepts = ["All", ...new Set(filtered.map(a => a.department).filter(Boolean))];
+      setDepts(uniqueDepts);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load syllabi. Check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleLogout() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
   }
 
-  // Dean approve — override
   async function handleApprove(s) {
     setActionLoading(l => ({ ...l, [s._id]:"approve" }));
     try {
-      // TODO: await fetch(`/api/v1/assignments/${s._id}/review`, { method:"PATCH", body: JSON.stringify({ status:"approved", remark:"" }) })
-      await new Promise(r => setTimeout(r, 700));
-      setSyllabi(prev => prev.map(a => a._id === s._id ? { ...a, status:"approved" } : a));
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/v1/assignments/${s._id}/review`,
+        { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ status:"approved", remark:"" }) }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setSyllabi(prev => prev.map(a => a._id === s._id ? { ...a, status:"approved", remark:"" } : a));
     } catch (err) { alert("Failed: " + err.message); }
     finally { setActionLoading(l => ({ ...l, [s._id]:null })); }
   }
@@ -79,8 +101,12 @@ export default function DeanSyllabi() {
     if (!remark.trim()) return;
     setSubmitting(true);
     try {
-      // TODO: await fetch(`/api/v1/assignments/${rejectModal._id}/review`, { method:"PATCH", body: JSON.stringify({ status:"rejected", remark }) })
-      await new Promise(r => setTimeout(r, 700));
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/v1/assignments/${rejectModal._id}/review`,
+        { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ status:"rejected", remark }) }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
       setSyllabi(prev => prev.map(a => a._id === rejectModal._id ? { ...a, status:"rejected", remark } : a));
       setRejectModal(null); setRemark("");
     } catch (err) { alert("Failed: " + err.message); }
@@ -153,6 +179,10 @@ export default function DeanSyllabi() {
             <h1 className="font-extrabold text-slate-800 text-base">All Syllabi</h1>
             <p className="text-xs text-slate-400 hidden md:block">Bangalore Institute of Technology</p>
           </div>
+          <button onClick={fetchSyllabi} title="Refresh"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer">
+            <RefreshCw size={14} className={`text-slate-500 ${loading ? "animate-spin" : ""}`} />
+          </button>
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
             <Shield size={13} className="text-amber-600" />
             <span className="text-xs font-bold text-amber-700">Dean Override</span>
@@ -184,9 +214,9 @@ export default function DeanSyllabi() {
             ))}
           </div>
 
-          {/* Dept filter + search */}
+          {/* Dept filter + search — built dynamically from DB */}
           <div className="flex flex-wrap gap-2 mb-5">
-            {DEPTS.map(d => (
+            {depts.map(d => (
               <button key={d} onClick={() => setDeptFilter(d)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border
                         ${deptFilter === d ? "bg-amber-500 text-white border-amber-500" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
@@ -201,13 +231,51 @@ export default function DeanSyllabi() {
             </div>
           </div>
 
-          {/* Cards */}
-          {visible.length === 0 ? (
+          {/* Loading skeletons */}
+          {loading && (
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {[1,2,3,4,5,6].map(i => (
+                <div key={i} className="bg-white rounded-2xl border border-slate-100 p-5 animate-pulse">
+                  <div className="h-1.5 bg-slate-100 rounded mb-4" />
+                  <div className="flex gap-3 mb-4">
+                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 bg-slate-100 rounded w-3/4" />
+                      <div className="h-2.5 bg-slate-100 rounded w-1/2" />
+                    </div>
+                  </div>
+                  <div className="h-2.5 bg-slate-100 rounded w-2/3 mb-4" />
+                  <div className="flex gap-2">
+                    <div className="h-8 bg-slate-100 rounded-xl w-14" />
+                    <div className="h-8 bg-slate-100 rounded-xl flex-1" />
+                    <div className="h-8 bg-slate-100 rounded-xl flex-1" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Error */}
+          {!loading && error && (
+            <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
+              <XCircle size={32} className="mx-auto text-red-300 mb-2" />
+              <p className="font-bold text-red-700 text-sm">{error}</p>
+              <button onClick={fetchSyllabi} className="mt-3 px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-red-700">Retry</button>
+            </div>
+          )}
+
+          {/* Empty */}
+          {!loading && !error && visible.length === 0 && (
             <div className="bg-white rounded-2xl border border-slate-100 py-14 text-center shadow-sm">
               <FileText size={38} className="mx-auto mb-3 opacity-20" />
-              <p className="font-bold text-slate-400 text-sm">No syllabi found</p>
+              <p className="font-bold text-slate-700">
+                {syllabi.length === 0 ? "No syllabi submitted yet" : "No syllabi match your filter"}
+              </p>
             </div>
-          ) : (
+          )}
+
+          {/* Cards */}
+          {!loading && !error && visible.length > 0 && (
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
               {visible.map(s => {
                 const meta = STATUS_META[s.status] || STATUS_META.submitted;

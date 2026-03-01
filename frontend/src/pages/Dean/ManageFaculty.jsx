@@ -8,21 +8,13 @@ import {
   LogOut, User, Menu, X, Shield,
   Search, CheckCircle, AlertCircle
 } from "lucide-react";
+import { useEffect } from "react";
 
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/dean/dashboard",  icon: LayoutDashboard },
   { label:"Syllabi",     path:"/dean/syllabi",     icon: FileText        },
   { label:"Manage BOS",  path:"/dean/manage-bos",  icon: Users           },
   { label:"Faculty",     path:"/dean/faculty",     icon: GraduationCap   },
-];
-
-const MOCK_FACULTY = [
-  { id:"f1", name:"Mrs. Priya Sharma", department:"CSE",   subject_code:"CS601",  subject_name:"Machine Learning",        is_active:true  },
-  { id:"f2", name:"Mr. Ravi Kumar",    department:"CSE",   subject_code:"BCS303", subject_name:"Operating Systems",       is_active:true  },
-  { id:"f3", name:"Dr. Suresh Naik",   department:"ISE",   subject_code:"CS501",  subject_name:"Computer Networks",      is_active:true  },
-  { id:"f4", name:"Ms. Deepa Rao",     department:"ECE",   subject_code:"EC301",  subject_name:"Digital Electronics",    is_active:false },
-  { id:"f5", name:"Mr. Anand Kumar",   department:"MECH",  subject_code:"ME201",  subject_name:"Engineering Mechanics",  is_active:true  },
-  { id:"f6", name:"Dr. Rekha Nair",    department:"CIVIL", subject_code:"MA101",  subject_name:"Engineering Mathematics",is_active:true  },
 ];
 
 const DEPTS = ["CSE", "ISE", "ECE", "MECH", "CIVIL"];
@@ -33,12 +25,35 @@ export default function DeanFaculty() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search,      setSearch]      = useState("");
   const [deptFilter,  setDeptFilter]  = useState("All");
+  const [facList,setFacList] = useState([])
+
+  async function fetchAllFac() {
+      const response = await fetch(`http://127.0.0.1:8000/api/v1/faculty`,{
+          method:"GET",
+          headers: {
+              "Content-Type": "application/json",
+          }
+      })
+      const data = await response.json();
+  
+      if(data.status === "Success")
+      {
+          setFacList(data.bos)
+          alert(data.message)
+      }
+      else
+          alert(data.message)
+    }
+  
+    useEffect(()=>{
+      fetchAllFac()
+    },[])
 
   function handleLogout() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
   }
 
-  const visible = MOCK_FACULTY
+  const visible = facList
     .filter(f => deptFilter === "All" || f.department === deptFilter)
     .filter(f =>
       f.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -98,7 +113,7 @@ export default function DeanFaculty() {
           </div>
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
             <GraduationCap size={13} className="text-amber-600" />
-            <span className="text-xs font-bold text-amber-700">{MOCK_FACULTY.length} Total</span>
+            <span className="text-xs font-bold text-amber-700">{facList.length} Total</span>
           </div>
         </header>
 

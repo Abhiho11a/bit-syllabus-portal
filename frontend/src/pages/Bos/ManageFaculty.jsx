@@ -34,7 +34,7 @@ const user = JSON.parse(localStorage.getItem("user"))
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch]           = useState("");
-  const [faculty, setFaculty]         = useState(MOCK_FACULTY);
+  const [faculty, setFaculty]         = useState([MOCK_FACULTY]);
   const [showAdd, setShowAdd]         = useState(false);
   const [form, setForm]               = useState(BLANK_FORM);
   const [adding, setAdding]           = useState(false);
@@ -77,9 +77,9 @@ const user = JSON.parse(localStorage.getItem("user"))
   }
 
   const visible = faculty.filter(f =>
-    f.name.toLowerCase().includes(search.toLowerCase()) ||
-    f.subject_code.toLowerCase().includes(search.toLowerCase()) ||
-    f.subject_name.toLowerCase().includes(search.toLowerCase())
+    f.name.toLowerCase().includes(search?.toLowerCase()) ||
+    f.subject_code.toLowerCase().includes(search?.toLowerCase()) ||
+    f.subject_name.toLowerCase().includes(search?.toLowerCase())
   );
 
   const activeCount   = faculty.filter(f => f.is_active).length;

@@ -242,6 +242,25 @@ app.patch("/api/v1/assignments/:id/review", async (req, res) => {
 });
 
 //DEAN requests
+//Fetch All Bos
+app.get("/api/v1/bos",async(req,res) => {
+  try{
+    const bosLists = await User.find({role:"bos"})
+    res.status(200).json({status:"Success",message:"All Bos Fetched",bos:bosLists})
+  }catch(err)
+  {
+    res.status(500).json({status:"Fail",message:err.message})
+  }
+})
+app.get("/api/v1/faculty",async(req,res) => {
+  try{
+    const bosLists = await User.find({role:"faculty"})
+    res.status(200).json({status:"Success",message:"All Bos Fetched",bos:bosLists})
+  }catch(err)
+  {
+    res.status(500).json({status:"Fail",message:err.message})
+  }
+})
 //ADD Bos
 app.post("/api/v1/bos",async(req,res) => {
   try{

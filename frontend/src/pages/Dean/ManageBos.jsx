@@ -1,7 +1,7 @@
 // pages/dean/ManageBOS.jsx
 // Dean manages BOS members across all departments
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, FileText, Users, GraduationCap,
@@ -17,14 +17,6 @@ const NAV_LINKS = [
   { label:"Faculty",     path:"/dean/faculty",     icon: GraduationCap   },
 ];
 
-const MOCK_BOS = [
-  { id:"b1", name:"Prof. Anitha Rao",    department:"CSE",   is_active:true,  added_date:"2025-01-10" },
-  { id:"b2", name:"Dr. Ramesh Babu",     department:"ISE",   is_active:true,  added_date:"2025-01-12" },
-  { id:"b3", name:"Prof. Kavya Shetty",  department:"ECE",   is_active:true,  added_date:"2025-01-15" },
-  { id:"b4", name:"Dr. Mohan Reddy",     department:"MECH",  is_active:false, added_date:"2024-12-01" },
-  { id:"b5", name:"Prof. Sujatha Naik",  department:"CIVIL", is_active:true,  added_date:"2025-02-01" },
-];
-
 const DEPTS = ["CSE", "ISE", "ECE", "MECH", "CIVIL"];
 const BLANK = { name:"", department:"", password:"" };
 
@@ -33,7 +25,7 @@ export default function DeanManageBOS() {
   const user     = JSON.parse(localStorage.getItem("user"));
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [bosList,     setBosList]     = useState(MOCK_BOS);
+  const [bosList,     setBosList]     = useState([]);
   const [search,      setSearch]      = useState("");
   const [deptFilter,  setDeptFilter]  = useState("All");
   const [showAdd,     setShowAdd]     = useState(false);
@@ -42,12 +34,36 @@ export default function DeanManageBOS() {
 
   const setF = (k) => (v) => setForm(f => ({ ...f, [k]:v }));
 
+  async function fetchAllBos() {
+    const response = await fetch(`http://127.0.0.1:8000/api/v1/bos`,{
+        method:"GET",
+        headers: {
+            "Content-Type": "application/json",
+        }
+    })
+    const data = await response.json();
+
+    if(data.status === "Success")
+    {
+        setBosList(data.bos)
+        alert(data.message)
+    }
+    else
+        alert(data.message)
+  }
+
+  useEffect(()=>{
+    fetchAllBos()
+  },[])
+
   function handleLogout() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
   }
 
   function handleToggle(id) {
-    setBosList(l => l.map(b => b.id === id ? { ...b, is_active:!b.is_active } : b));
+        console.log(bosList)
+
+    setBosList(l => l.map(b => b._id === id ? { ...b, is_active:!b.is_active } : b));
     // TODO: PATCH /api/v1/users/:id { is_active }
   }
 
@@ -219,10 +235,10 @@ export default function DeanManageBOS() {
                   </div>
 
                   <p className="text-[11px] text-slate-400 mb-4">
-                    Added {new Date(b.added_date).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
+                    Added {new Date(b.createdAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
                   </p>
 
-                  <button onClick={() => handleToggle(b.id)}
+                  <button onClick={() => handleToggle(b._id)}
                           className={`w-full py-2 rounded-xl text-xs font-bold transition-all cursor-pointer
                             ${b.is_active
                               ? "bg-red-50 text-red-500 border border-red-100 hover:bg-red-100"
