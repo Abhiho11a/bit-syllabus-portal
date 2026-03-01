@@ -15,6 +15,9 @@ import DeanDashboard from "./pages/Dean/Dashboard"
 import DeanSyllabi from "./pages/Dean/Syllabi"
 import DeanFaculty from "./pages/Dean/ManageFaculty"
 import DeanManageBOS from "./pages/Dean/ManageBos"
+import AdminDashboard from "./pages/Admin/Dashboard"
+import AdminUsers from "./pages/Admin/Users"
+import AdminDepartments from "./pages/Admin/Departments"
 export default function App(){
   return(
     <div>
@@ -43,6 +46,11 @@ export default function App(){
         <Route path="/dean/syllabi" element={<DeanSyllabi/>}/>
         <Route path="/dean/faculty" element={<DeanFaculty/>}/>
         <Route path="/dean/manage-bos" element={<DeanManageBOS/>}/>
+
+        {/*  */}
+        <Route path="/admin/dashboard" element={<AdminDashboard/>}/>
+        <Route path="/admin/users" element={<AdminUsers/>}/>
+        <Route path="/admin/departments" element={<AdminDepartments/>}/>
       </Routes>
     
     </div>
