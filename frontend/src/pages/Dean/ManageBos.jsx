@@ -56,7 +56,18 @@ export default function DeanManageBOS() {
     if (!form.name || !form.department || !form.password) { alert("Fill all fields"); return; }
     setAdding(true);
     // TODO: POST /api/v1/users { ...form, role:"bos" }
-    await new Promise(r => setTimeout(r, 800));
+    // console.log(form)
+    const response = await fetch(`http://127.0.0.1:8000/api/v1/bos`,{
+        method:"POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body:JSON.stringify({name:form.name,department:form.department,password:form.password})
+    })
+    const data = await response.json();
+    console.log(data)
+    alert(data.message)
+
     setBosList(l => [{
       id:         `b${Date.now()}`,
       name:        form.name,

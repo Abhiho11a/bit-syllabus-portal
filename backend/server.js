@@ -241,6 +241,34 @@ app.patch("/api/v1/assignments/:id/review", async (req, res) => {
   }
 });
 
+//DEAN requests
+//ADD Bos
+app.post("/api/v1/bos",async(req,res) => {
+  try{
+    const {name,department,password} = req.body;
+    const bosExists = await User.findOne({name,department})
+    console.log(req.body)
+
+    if(bosExists)
+      return res.status(409).json({
+          status:"Fail",
+          message: `Bos is already assigned.`,
+          bosExists
+        });
+
+    const newBos = await User.create({
+      name,
+      department:department.toUpperCase(),
+      password,
+      role:"bos"
+    })
+  res.status(200).json({status:"Successs",message:"Bos assigned successfully",newBos})
+
+}catch(err){
+  res.status(500).json({status:"Fail",message:err.message})
+}
+})
+
 const PORT = process.env.PORT
 app.listen(PORT,"127.0.0.1",()=>{
     console.log(`Listening to the PORT:${PORT}\nhttp://127.0.0.1:${PORT}/`)
