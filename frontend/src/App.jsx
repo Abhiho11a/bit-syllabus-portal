@@ -11,6 +11,10 @@ import BosAssignments from "./pages/Bos/Assignments"
 import BosFaculty from "./pages/Bos/ManageFaculty"
 import CoordinatorDashboard from "./pages/Coordinator/Dashboard"
 import CoordinatorSyllabi from "./pages/Coordinator/Syllabi"
+import DeanDashboard from "./pages/Dean/Dashboard"
+import DeanSyllabi from "./pages/Dean/Syllabi"
+import DeanFaculty from "./pages/Dean/ManageFaculty"
+import DeanManageBOS from "./pages/Dean/ManageBos"
 export default function App(){
   return(
     <div>
@@ -33,6 +37,12 @@ export default function App(){
         {/*  */}
         <Route path="/coordinator/dashboard" element={<CoordinatorDashboard/>}/>
         <Route path="/coordinator/syllabi" element={<CoordinatorSyllabi/>}/>
+
+        {/*  */}
+        <Route path="/dean/dashboard" element={<DeanDashboard/>}/>
+        <Route path="/dean/syllabi" element={<DeanSyllabi/>}/>
+        <Route path="/dean/faculty" element={<DeanFaculty/>}/>
+        <Route path="/dean/manage-bos" element={<DeanManageBOS/>}/>
       </Routes>
     
     </div>
