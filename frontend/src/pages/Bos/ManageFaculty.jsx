@@ -1,7 +1,7 @@
 // pages/bos/Faculty.jsx
 // BOS — manage faculty in their department (view, add, deactivate)
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 // import { useAuth } from "../../context/AuthContext";
 import {
@@ -11,12 +11,6 @@ import {
   AlertCircle, Send
 } from "lucide-react";
 
-const MOCK_FACULTY = [
-  { id:"f1", name:"Mrs. Priya Sharma", is_active:true,  added_date:"2025-06-01" },
-  { id:"f2", name:"Mr. Ravi Kumar",    is_active:true,  added_date:"2025-06-02" },
-  { id:"f3", name:"Dr. Suresh Naik",   is_active:true,  added_date:"2025-06-05" },
-  { id:"f4", name:"Ms. Deepa Rao",     is_active:false, added_date:"2025-05-10" },
-];
 
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/bos/dashboard",  icon: LayoutDashboard },
@@ -33,12 +27,39 @@ export default function BosFaculty() {
   const user = JSON.parse(localStorage.getItem("user"))
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch]           = useState("");
-  const [faculty, setFaculty]         = useState(MOCK_FACULTY);
+  const [faculty, setFaculty]         = useState([]);
   const [showAdd, setShowAdd]         = useState(false);
   const [form, setForm]               = useState(BLANK_FORM);
   const [adding, setAdding]           = useState(false);
 
   const setF = (k) => (v) => setForm(f => ({ ...f, [k]: v }));
+
+  useEffect(()=>{
+    fetchFaculty()
+  },[])
+
+  async function fetchFaculty(){
+    try{
+    const response = await fetch(`http://127.0.0.1:8000/api/v1/users?role=faculty&department=${user?.department}&createdBy=${user?.id}`,{
+      method:"GET",
+      headers: { "Content-Type": "application/json"}
+    })
+    
+    const data = await response.json()
+    if(!response.ok)
+    {
+      alert("Something went wrong")
+      return
+    }
+
+    alert("Data fetched successfully")
+    // console.log(data)
+    setFaculty(data.users)
+  }catch(err){
+    console.error(err);
+    alert("Server error. Try again.");
+  }
+  }
 
   function handleLogout() {
     if (confirm("Log out?")) { 
@@ -48,7 +69,7 @@ export default function BosFaculty() {
 
   function handleToggleActive(id) {
     setFaculty(f => f.map(m =>
-      m.id === id ? { ...m, is_active: !m.is_active } : m
+      m._id === id ? { ...m, is_active: !m.is_active } : m
     ));
     // TODO: PATCH /api/v1/users/:id  { is_active: !current }
   }
@@ -240,7 +261,7 @@ export default function BosFaculty() {
                       <div>
                         <h3 className="font-bold text-slate-800 text-sm">{f.name}</h3>
                         <p className="text-xs text-slate-400 mt-0.5">
-                          Added {f.added_date ? new Date(f.added_date || f.createdAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}) : "—"}
+                          Added {f.createdAt ? new Date(f.createdAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}) : "—"}
                         </p>
                       </div>
                     </div>
@@ -258,7 +279,7 @@ export default function BosFaculty() {
 
                   <div className="flex gap-2 mt-4">
                     <button
-                      onClick={() => handleToggleActive(f.id)}
+                      onClick={() => handleToggleActive(f._id)}
                       className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer
                         ${f.is_active
                           ? "bg-red-50 text-red-500 border border-red-100 hover:bg-red-100"

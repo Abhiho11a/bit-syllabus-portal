@@ -70,19 +70,29 @@ app.post("/api/v1/auth/login", async (req, res) => {
 
 //BOS Requests
 //Fetching faculties
-app.get("/api/v1/users",async(req,res) => {
-  try{
-    const {role,department} = req.query
+app.get("/api/v1/users", async (req, res) => {
+  try {
+    const { role, department, created_by } = req.query;
 
-    // console.log(role,department)
-    const users = await User.find({role,department})
+    // Build filter — only include fields that are actually provided
+    const filter = {};
+    if (role       && role       !== "undefined") filter.role       = role;
+    if (department && department !== "undefined") filter.department = department.toUpperCase();
+    if (created_by && created_by !== "undefined") filter.created_by = created_by;
 
-    res.status(200).json({status:"Success",message:"Users fetched..",users:users})
-  }catch (err) {
-    console.error("GET/faculties", err);
+    const users = await User.find(filter).select("-password"); // never return password
+
+    return res.status(200).json({
+      status:  "Success",
+      message: "Users fetched.",
+      users,
+    });
+
+  } catch (err) {
+    console.error("[GET /users]", err);
     return res.status(500).json({ message: "Server error." });
   }
-})
+});
 //add faculty
 app.post("/api/v1/faculty", async (req, res) => {
   try {
@@ -103,7 +113,6 @@ app.post("/api/v1/faculty", async (req, res) => {
       });
     }
 
-    // ── 2. Find BOS user → get their department ───────────────
     const bosUser = await User.findOne({ _id: bos_id, role: "bos" });
     if (!bosUser) {
       return res.status(404).json({
@@ -114,8 +123,6 @@ app.post("/api/v1/faculty", async (req, res) => {
 
     const department = bosUser.department;
 
-    // ── 3. Check for duplicate (same name + dept) ─────────────
-    //    Prevents adding the same person twice by accident
     const duplicate = await User.findOne({
       name:       { $regex: new RegExp(`^${name.trim()}$`, "i") },
       department: department,
@@ -129,9 +136,6 @@ app.post("/api/v1/faculty", async (req, res) => {
       });
     }
 
-    // ── 4. Create the faculty user ────────────────────────────
-    //    Password hashing is handled automatically by the
-    //    UserSchema.pre("save") bcrypt hook in User.js
     const newFaculty = await User.create({
       name:       name.trim(),
       password:   password,
@@ -141,7 +145,6 @@ app.post("/api/v1/faculty", async (req, res) => {
       is_active:  true,
     });
 
-    // ── 5. Return created user (password excluded) ────────────
     return res.status(201).json({
       status:  "Success",
       message: "Faculty added successfully.",
@@ -163,8 +166,38 @@ app.post("/api/v1/faculty", async (req, res) => {
     });
   }
 });
+//FETCH assignments
+app.get("/api/v1/assignments", async (req, res) => {
+  try {
+    const { assigned_by, department, faculty_id } = req.query;
 
+    // Build filter — only add field if value is a real non-empty string
+    // Guards against "undefined" or "" being cast to ObjectId (causes CastError)
+    const filter = {};
+    if (assigned_by && assigned_by !== "undefined" && assigned_by !== "null")
+      filter.assigned_by = assigned_by;
+    if (department  && department  !== "undefined" && department  !== "null")
+      filter.department  = department.toUpperCase();
+    if (faculty_id  && faculty_id  !== "undefined" && faculty_id  !== "null")
+      filter.faculty_id  = faculty_id;
 
+    const data = await Assignment
+      .find(filter)
+      .populate("faculty_id",  "name department")  // faculty name in rows
+      .populate("assigned_by", "name")             // BOS name in dept view
+      .sort({ createdAt: -1 });                    // newest first
+
+    return res.status(200).json({
+      status:      "Success",
+      message:     "Assignments fetched successfully.",
+      assignments: data,
+    });
+
+  } catch (err) {
+    console.error("[GET /assignments]", err);
+    return res.status(500).json({ message: "Server error." });
+  }
+});
 //assign tasks
 app.post("/api/v1/assignments",async(req,res) => {
   try {
@@ -216,7 +249,6 @@ app.post("/api/v1/assignments",async(req,res) => {
     return res.status(500).json({ message: "Server error." });
   }
 })
-
 
 //FACULTY requests
 app.get("/api/v1/assignments",async(req,res) => {
