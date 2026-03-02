@@ -12,8 +12,9 @@ import { useMemo } from "react";
 
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/admin/dashboard",   icon: LayoutDashboard },
-  { label:"Users",       path:"/admin/users",        icon: Users           },
-  { label:"Departments", path:"/admin/departments",  icon: Building2       },
+  { label:"Users",       path:"/admin/users",       icon: Users           },
+  { label:"Syllabi",     path:"/admin/syllabi",     icon: FileText },
+  // { label:"Departments", path:"/admin/departments", icon: Building2       },
 ];
 
 const ROLE_META = {
@@ -29,9 +30,11 @@ export default function AdminDashboard() {
   const user     = JSON.parse(localStorage.getItem("user"));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [users,setUsers] = useState([])
+  const [syllabi,setSyllabi] = useState([])
 
   useEffect(()=>{
     fetchAllUsers();
+    fetchAssignmentCnt();
   },[])
 
   async function fetchAllUsers(){
@@ -44,8 +47,21 @@ export default function AdminDashboard() {
     else
     {
         alert("All users fetched")
-        console.log(data)
+        // console.log(data)
         setUsers(data.users)
+    }
+  }
+  
+  async function fetchAssignmentCnt() {
+    try {
+      // Admin fetches ALL — no filter
+      const res  = await fetch("http://127.0.0.1:8000/api/v1/assignments");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      setSyllabi(data.assignments)
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load syllabi.");
     }
   }
 
@@ -60,6 +76,7 @@ export default function AdminDashboard() {
       dean:        byRole("dean"),
       admin:       byRole("admin"),
       departments: depts.size,
+      totalSyllabi:syllabi.length
     };
   }, [users]);
 
@@ -151,7 +168,7 @@ export default function AdminDashboard() {
               {[
                 { label:"Total Users",   val: stats.totalUsers  },
                 { label:"Departments",   val: stats.departments },
-                { label:"Syllabi",       val: stats.totalSyllabi},
+                { label:"Total Syllabi",       val: stats.totalSyllabi},
               ].map(s => (
                 <div key={s.label} className="bg-white/10 border border-white/20 rounded-xl px-4 py-3">
                   <p className="text-2xl font-extrabold text-white">{s.val}</p>

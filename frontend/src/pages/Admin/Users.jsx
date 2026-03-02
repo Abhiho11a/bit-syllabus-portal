@@ -6,14 +6,16 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Building2, LogOut,
   User, Menu, X, ShieldCheck, Search,
-  UserPlus, CheckCircle, AlertCircle, Send, Trash2
+  UserPlus, CheckCircle, AlertCircle, Send, Trash2,
+  FileText
 } from "lucide-react";
 import { useEffect } from "react";
 
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/admin/dashboard",  icon: LayoutDashboard },
   { label:"Users",       path:"/admin/users",       icon: Users           },
-  { label:"Departments", path:"/admin/departments", icon: Building2       },
+  // { label:"Departments", path:"/admin/departments", icon: Building2       },
+  { label:"Syllabi",     path:"/admin/syllabi",     icon: FileText },
 ];
 
 const ROLES    = ["faculty", "bos", "coordinator", "dean", "admin"];
@@ -102,7 +104,7 @@ export default function AdminUsers() {
     );
 
   const needsDept    = ["faculty","bos","coordinator"].includes(form.role);
-  const needsSubject = form.role === "faculty";
+  // const needsSubject = form.role === "faculty";
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fb]"
@@ -204,6 +206,7 @@ export default function AdminUsers() {
               <div className="divide-y divide-slate-50">
                 {visible.map(u => {
                   const meta = ROLE_META[u.role] || ROLE_META.faculty;
+                  console.log(u.role)
                   return (
                     <div key={u._id}
                          className="flex flex-col md:grid md:grid-cols-[2fr_100px_120px_100px_110px]
@@ -225,7 +228,7 @@ export default function AdminUsers() {
                       {/* Role */}
                       <span className="text-[11px] font-bold px-2.5 py-1 rounded-full capitalize w-fit"
                             style={{ background:meta.bg, color:meta.color }}>
-                        {u.role}
+                        {u.role == "autonomous_coordinator"?"coordinator":u.role}
                       </span>
 
                       {/* Dept */}
