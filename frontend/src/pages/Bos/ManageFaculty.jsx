@@ -12,10 +12,10 @@ import {
 } from "lucide-react";
 
 const MOCK_FACULTY = [
-  { id:"f1", name:"Mrs. Priya Sharma", subject_code:"CS601",  subject_name:"Machine Learning",        is_active:true,  added_date:"2025-06-01" },
-  { id:"f2", name:"Mr. Ravi Kumar",    subject_code:"BCS303", subject_name:"Operating Systems",       is_active:true,  added_date:"2025-06-02" },
-  { id:"f3", name:"Dr. Suresh Naik",   subject_code:"CS501",  subject_name:"Computer Networks",      is_active:true,  added_date:"2025-06-05" },
-  { id:"f4", name:"Ms. Deepa Rao",     subject_code:"CS401",  subject_name:"Analysis of Algorithms", is_active:false, added_date:"2025-05-10" },
+  { id:"f1", name:"Mrs. Priya Sharma", is_active:true,  added_date:"2025-06-01" },
+  { id:"f2", name:"Mr. Ravi Kumar",    is_active:true,  added_date:"2025-06-02" },
+  { id:"f3", name:"Dr. Suresh Naik",   is_active:true,  added_date:"2025-06-05" },
+  { id:"f4", name:"Ms. Deepa Rao",     is_active:false, added_date:"2025-05-10" },
 ];
 
 const NAV_LINKS = [
@@ -25,16 +25,15 @@ const NAV_LINKS = [
   { label:"Faculty",     path:"/bos/faculty",     icon: Users           },
 ];
 
-const BLANK_FORM = { name:"", subject_code:"", subject_name:"", password:"" };
+const BLANK_FORM = { name:"", password:"" };
 
 export default function BosFaculty() {
   const navigate        = useNavigate();
-//   const { user, logout} = useAuth();
-const user = JSON.parse(localStorage.getItem("user"))
-
+  // const { user, logout} = useAuth();
+  const user = JSON.parse(localStorage.getItem("user"))
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch]           = useState("");
-  const [faculty, setFaculty]         = useState([MOCK_FACULTY]);
+  const [faculty, setFaculty]         = useState(MOCK_FACULTY);
   const [showAdd, setShowAdd]         = useState(false);
   const [form, setForm]               = useState(BLANK_FORM);
   const [adding, setAdding]           = useState(false);
@@ -43,8 +42,8 @@ const user = JSON.parse(localStorage.getItem("user"))
 
   function handleLogout() {
     if (confirm("Log out?")) { 
-        // logout(); 
-        navigate("/login"); }
+      // logout(); 
+      navigate("/login"); }
   }
 
   function handleToggleActive(id) {
@@ -56,30 +55,37 @@ const user = JSON.parse(localStorage.getItem("user"))
 
   async function handleAdd(e) {
     e.preventDefault();
-    if (!form.name || !form.subject_code || !form.subject_name || !form.password) {
+    if (!form.name || !form.password) {
       alert("Please fill all fields"); return;
     }
     setAdding(true);
-    // TODO: POST /api/v1/users { ...form, role:"faculty", department: user?.department, created_by: user?._id }
-    await new Promise(r => setTimeout(r, 800));
-    const newFac = {
-      id: `f${Date.now()}`,
-      name:         form.name,
-      subject_code: form.subject_code.toUpperCase(),
-      subject_name: form.subject_name,
-      is_active:    true,
-      added_date:   new Date().toISOString().split("T")[0],
-    };
-    setFaculty(f => [newFac, ...f]);
-    setForm(BLANK_FORM);
-    setShowAdd(false);
-    setAdding(false);
+    try {
+      const res  = await fetch("http://127.0.0.1:8000/api/v1/faculty", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          name:     form.name,
+          password: form.password,
+          bos_id:   user?.id,          // logged-in BOS user's _id from localStorage
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.message || "Failed to add faculty"); return; }
+
+      // Optimistic update — add the returned faculty to the top of the list
+      setFaculty(f => [data.faculty, ...f]);
+      setForm(BLANK_FORM);
+      setShowAdd(false);
+    } catch (err) {
+      console.error(err);
+      alert("Server error. Try again.");
+    } finally {
+      setAdding(false);
+    }
   }
 
   const visible = faculty.filter(f =>
-    f.name.toLowerCase().includes(search?.toLowerCase()) ||
-    f.subject_code.toLowerCase().includes(search?.toLowerCase()) ||
-    f.subject_name.toLowerCase().includes(search?.toLowerCase())
+    f.name?.toLowerCase().includes(search.toLowerCase())
   );
 
   const activeCount   = faculty.filter(f => f.is_active).length;
@@ -233,7 +239,9 @@ const user = JSON.parse(localStorage.getItem("user"))
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-800 text-sm">{f.name}</h3>
-                        <p className="text-xs text-slate-400 font-mono mt-0.5">{f.subject_code}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Added {f.added_date ? new Date(f.added_date || f.createdAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}) : "—"}
+                        </p>
                       </div>
                     </div>
                     {/* Active badge */}
@@ -248,16 +256,7 @@ const user = JSON.parse(localStorage.getItem("user"))
                     </span>
                   </div>
 
-                  <p className="text-xs text-slate-500 mb-4 leading-snug">
-                    <span className="font-semibold text-slate-700">Subject:</span> {f.subject_name}
-                  </p>
-
-                  <div className="text-[11px] text-slate-400 mb-4">
-                    Added {new Date(f.added_date).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleToggleActive(f.id)}
                       className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer
@@ -309,10 +308,8 @@ const user = JSON.parse(localStorage.getItem("user"))
 
             <form onSubmit={handleAdd} className="px-6 py-5 flex flex-col gap-4">
               {[
-                { key:"name",         label:"Full Name",     placeholder:"e.g. Mrs. Priya Sharma",      mono:false },
-                { key:"subject_code", label:"Subject Code",  placeholder:"e.g. CS601",                  mono:true  },
-                { key:"subject_name", label:"Subject Name",  placeholder:"e.g. Machine Learning",       mono:false },
-                { key:"password",     label:"Password",      placeholder:"Set a login password",        mono:false, type:"password" },
+                { key:"name",     label:"Full Name", placeholder:"e.g. Mrs. Priya Sharma", mono:false },
+                { key:"password", label:"Password",  placeholder:"Set a login password",   mono:false, type:"password" },
               ].map(field => (
                 <div key={field.key}>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
@@ -321,14 +318,11 @@ const user = JSON.parse(localStorage.getItem("user"))
                   <input
                     type={field.type || "text"}
                     value={form[field.key]}
-                    onChange={e => setF(field.key)(
-                      field.mono ? e.target.value.toUpperCase() : e.target.value
-                    )}
+                    onChange={e => setF(field.key)(e.target.value)}
                     placeholder={field.placeholder}
                     className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5
                                text-sm text-slate-800 outline-none focus:border-purple-400
-                               focus:ring-2 focus:ring-purple-50 transition-all placeholder:text-slate-300
-                               ${field.mono ? "font-mono" : ""}`}
+                               focus:ring-2 focus:ring-purple-50 transition-all placeholder:text-slate-300`}
                   />
                 </div>
               ))}
@@ -337,7 +331,7 @@ const user = JSON.parse(localStorage.getItem("user"))
                 <AlertCircle size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-amber-700 leading-relaxed">
                   Department <span className="font-bold">{user?.department}</span> will be auto-assigned.
-                  Faculty logs in with their <span className="font-bold">name + subject code + password</span>.
+                  You can assign subjects to this faculty from the <span className="font-bold">Assign</span> page.
                 </p>
               </div>
 

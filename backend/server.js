@@ -17,7 +17,7 @@ app.get("/",(req,res)=>{
 })
 app.post("/api/v1/auth/login", async (req, res) => {
   try {
-    const { name, email, department, subject_code, password, role } = req.body;
+    const { name, email, department, password, role } = req.body;
 
     // build query based on role
     const query = { role, is_active: true };
@@ -25,7 +25,6 @@ app.post("/api/v1/auth/login", async (req, res) => {
     if (role === "faculty") {
       query.name         = name;
       query.department   = department?.toUpperCase();
-      query.subject_code = subject_code?.toUpperCase();
     } else if (role === "bos" || role === "autonomous_coordinator") {
       query.name       = name;
       query.department = department?.toUpperCase();
@@ -84,6 +83,88 @@ app.get("/api/v1/users",async(req,res) => {
     return res.status(500).json({ message: "Server error." });
   }
 })
+//add faculty
+app.post("/api/v1/faculty", async (req, res) => {
+  try {
+    const { name, password, bos_id } = req.body;
+
+    // ── 1. Validate required fields ───────────────────────────
+    if (!name || !password || !bos_id) {
+      return res.status(400).json({
+        status:  "Fail",
+        message: "name, password, and bos_id are required.",
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        status:  "Fail",
+        message: "Password must be at least 6 characters.",
+      });
+    }
+
+    // ── 2. Find BOS user → get their department ───────────────
+    const bosUser = await User.findOne({ _id: bos_id, role: "bos" });
+    if (!bosUser) {
+      return res.status(404).json({
+        status:  "Fail",
+        message: "BOS user not found.",
+      });
+    }
+
+    const department = bosUser.department;
+
+    // ── 3. Check for duplicate (same name + dept) ─────────────
+    //    Prevents adding the same person twice by accident
+    const duplicate = await User.findOne({
+      name:       { $regex: new RegExp(`^${name.trim()}$`, "i") },
+      department: department,
+      role:       "faculty",
+    });
+
+    if (duplicate) {
+      return res.status(409).json({
+        status:  "Fail",
+        message: `A faculty member named "${name}" already exists in ${department}.`,
+      });
+    }
+
+    // ── 4. Create the faculty user ────────────────────────────
+    //    Password hashing is handled automatically by the
+    //    UserSchema.pre("save") bcrypt hook in User.js
+    const newFaculty = await User.create({
+      name:       name.trim(),
+      password:   password,
+      role:       "faculty",
+      department: department,
+      created_by: bos_id,
+      is_active:  true,
+    });
+
+    // ── 5. Return created user (password excluded) ────────────
+    return res.status(201).json({
+      status:  "Success",
+      message: "Faculty added successfully.",
+      faculty: {
+        _id:        newFaculty._id,
+        name:       newFaculty.name,
+        department: newFaculty.department,
+        role:       newFaculty.role,
+        is_active:  newFaculty.is_active,
+        createdAt:  newFaculty.createdAt,
+      },
+    });
+
+  } catch (err) {
+    console.error("POST /api/v1/faculty error:", err);
+    return res.status(500).json({
+      status:  "Fail",
+      message: "Server error.",
+    });
+  }
+});
+
+
 //assign tasks
 app.post("/api/v1/assignments",async(req,res) => {
   try {

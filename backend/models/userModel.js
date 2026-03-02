@@ -38,18 +38,18 @@ const UserSchema = new mongoose.Schema(
     },
 
     // ── Faculty only ──────────────────────────────────────────────
-    subject_code: {
-      type: String,
-      uppercase: true,
-      trim: true,
-      default: null,          // null for all roles except faculty
-    },
+    // subject_code: {
+    //   type: String,
+    //   uppercase: true,
+    //   trim: true,
+    //   default: null,          // null for all roles except faculty
+    // },
 
-    subject_name: {
-      type: String,
-      trim: true,
-      default: null,          // null for all roles except faculty
-    },
+    // subject_name: {
+    //   type: String,
+    //   trim: true,
+    //   default: null,          // null for all roles except faculty
+    // },
 
     // ── Account status ────────────────────────────────────────────
     is_active: {

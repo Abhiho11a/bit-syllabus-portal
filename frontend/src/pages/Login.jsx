@@ -21,7 +21,7 @@ const ROLES = [
     color: "#2563eb",
     bg: "#eff6ff",
     ring: "#bfdbfe",
-    fields: ["name", "department", "subject_code", "password"],
+    fields: ["name", "department", "password"],
     redirect: "/faculty/dashboard",
   },
   {
@@ -75,7 +75,7 @@ const FIELD_META = {
   name:         { label: "Full Name",      placeholder: "Enter your full name",      type: "text",     icon: "👤" },
   email:        { label: "Email Address",  placeholder: "admin@college.edu",         type: "email",    icon: "✉️" },
   department:   { label: "Department",     placeholder: "",                           type: "select",   icon: "🏛️" },
-  subject_code: { label: "Subject Code",   placeholder: "e.g. CS601",               type: "text",     icon: "📘", mono: true, upper: true },
+  // subject_code: { label: "Subject Code",   placeholder: "e.g. CS601",               type: "text",     icon: "📘", mono: true, upper: true },
   password:     { label: "Password",       placeholder: "Enter your password",       type: "password", icon: "🔒" },
 };
 
@@ -112,6 +112,8 @@ export default function Login() {
         return;
       }
     }
+
+    // console.log(form)
 
     setLoading(true);
     setError("");

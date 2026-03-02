@@ -10,11 +10,6 @@ import {
   Send, ChevronLeft, CheckCircle
 } from "lucide-react";
 
-const MOCK_FACULTY = [
-  { id:"f1", name:"Mrs. Priya Sharma",  subject_code:"CS601"  },
-  { id:"f2", name:"Mr. Ravi Kumar",     subject_code:"BCS303" },
-  { id:"f3", name:"Dr. Suresh Naik",    subject_code:"CS501"  },
-];
 
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/bos/dashboard",  icon: LayoutDashboard },
@@ -68,7 +63,7 @@ const user = JSON.parse(localStorage.getItem("user"))
         // Authorization: `Bearer ${token}`   // if you’re using JWT middleware
       },
       body: JSON.stringify({
-        faculty_id: "69a1bc39f7343a0c32b4cf34",
+        faculty_id: form.faculty_id,
         subject_code: form.subject_code,
         subject_name: form.subject_name,
         sem: form.sem,
