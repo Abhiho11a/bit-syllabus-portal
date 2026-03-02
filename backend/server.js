@@ -166,6 +166,41 @@ app.post("/api/v1/faculty", async (req, res) => {
     });
   }
 });
+//TOGGLE active status of the faculty
+app.patch("/api/v1/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1️⃣ Get current user
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        status: "Fail",
+        message: "User not found"
+      });
+    }
+
+    // 2️⃣ Toggle value
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { is_active: !user.is_active },
+      { new: true } // return updated document
+    );
+
+    return res.status(200).json({
+      status: "Success",
+      message: "User status updated",
+      user: updatedUser
+    });
+
+  } catch (err) {
+    console.error("Toggle error:", err);
+    return res.status(500).json({
+      status: "Fail",
+      message: "Server error"
+    });
+  }
+});
 //FETCH assignments
 app.get("/api/v1/assignments", async (req, res) => {
   try {

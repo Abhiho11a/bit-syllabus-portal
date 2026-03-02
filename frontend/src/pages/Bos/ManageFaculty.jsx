@@ -40,7 +40,7 @@ export default function BosFaculty() {
 
   async function fetchFaculty(){
     try{
-    const response = await fetch(`http://127.0.0.1:8000/api/v1/users?role=faculty&department=${user?.department}&createdBy=${user?.id}`,{
+    const response = await fetch(`http://127.0.0.1:8000/api/v1/users?role=faculty&department=${user?.department}&created_by=${user?.id}`,{
       method:"GET",
       headers: { "Content-Type": "application/json"}
     })
@@ -67,11 +67,28 @@ export default function BosFaculty() {
       navigate("/login"); }
   }
 
-  function handleToggleActive(id) {
-    setFaculty(f => f.map(m =>
-      m._id === id ? { ...m, is_active: !m.is_active } : m
-    ));
-    // TODO: PATCH /api/v1/users/:id  { is_active: !current }
+  async function handleToggleActive(id) {
+    try{
+      const response = await fetch(`http://127.0.0.1:8000/api/v1/users/${id}`,{
+        method:"PATCH",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      const data = await response.json();
+
+      if(response.ok)
+      {
+        alert("Toggle done")
+        setFaculty(f => f.map(m =>
+          m._id === id ? { ...m, is_active: !m.is_active } : m
+        ));
+      }
+      else
+        throw new Error(data.message)
+    }catch (err) {
+    console.error("POST /api/v1/faculty error:", err);
+    alert(err.message)
+  }
   }
 
   async function handleAdd(e) {
@@ -288,10 +305,12 @@ export default function BosFaculty() {
                       {f.is_active ? "Deactivate" : "Reactivate"}
                     </button>
                     <button
+                      disabled={!f.is_active}
                       onClick={() => navigate(`/bos/assign?faculty=${f.id}`)}
-                      className="flex-1 py-2 rounded-xl text-xs font-bold bg-purple-50
-                                 text-purple-600 border border-purple-100 hover:bg-purple-100
-                                 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold 
+                                 transition-all flex items-center justify-center gap-1.5
+                                 ${f.is_active?"cursor-pointer bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100":"bg-purple-100 text-purple-300 border border-purple-200 cursor-not-allowed"}
+                                 `}
                     >
                       <Plus size={12} /> Assign Task
                     </button>
