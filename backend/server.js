@@ -166,7 +166,7 @@ app.post("/api/v1/faculty", async (req, res) => {
     });
   }
 });
-//TOGGLE active status of the faculty
+//TOGGLE active status of the faculty and BOS
 app.patch("/api/v1/users/:id", async (req, res) => {
   try {
     const { id } = req.params;

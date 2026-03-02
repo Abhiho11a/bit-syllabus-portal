@@ -116,7 +116,7 @@ export default function BosDashboard() {
           subject_name: form.subject_name,
           sem:          form.sem,
           department:   user?.department,
-          assigned_by:  user?._id,
+          assigned_by:  user?.id,
         }),
       });
       const data = await res.json();

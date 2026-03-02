@@ -56,9 +56,9 @@ export default function DeanFaculty() {
   const visible = facList
     .filter(f => deptFilter === "All" || f.department === deptFilter)
     .filter(f =>
-      f.name.toLowerCase().includes(search.toLowerCase()) ||
-      f.subject_code.toLowerCase().includes(search.toLowerCase()) ||
-      f.department.toLowerCase().includes(search.toLowerCase())
+      (f.name||"").toLowerCase().includes(search.toLowerCase()) ||
+      (f.subject_code||"").toLowerCase().includes(search.toLowerCase()) ||
+      (f.department||"").toLowerCase().includes(search.toLowerCase())
     );
 
   return (
@@ -143,7 +143,8 @@ export default function DeanFaculty() {
             </div>
           </div>
 
-          {/* Faculty grid */}
+          {visible.length === 0?<h2 className="text-center">No faculty found</h2>:
+          // Faculty grid
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {visible.map(f => (
               <div key={f.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-all">
@@ -166,12 +167,13 @@ export default function DeanFaculty() {
                     {f.is_active ? <><CheckCircle size={10} />Active</> : <><AlertCircle size={10} />Inactive</>}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500">
+                {/* <p className="text-xs text-slate-500">
                   <span className="font-semibold text-slate-700">Subject: </span>{f.subject_name}
-                </p>
+                </p> */}
               </div>
             ))}
           </div>
+          }
         </main>
       </div>
     </div>

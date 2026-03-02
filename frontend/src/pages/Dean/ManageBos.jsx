@@ -60,11 +60,26 @@ export default function DeanManageBOS() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
   }
 
-  function handleToggle(id) {
-        console.log(bosList)
+  async function handleToggle(id) {
+    try{
+      const response = await fetch(`http://127.0.0.1:8000/api/v1/users/${id}`,{
+        method:"PATCH",
+        headers: { "Content-Type": "application/json" },
+      })
 
-    setBosList(l => l.map(b => b._id === id ? { ...b, is_active:!b.is_active } : b));
-    // TODO: PATCH /api/v1/users/:id { is_active }
+      const data = await response.json();
+
+      if(response.ok)
+      {
+        alert("Toggle done")
+        setBosList(l => l.map(b => b._id === id ? { ...b, is_active:!b.is_active } : b));
+      }
+      else
+        throw new Error(data.message)
+    }catch (err) {
+    console.error("POST /api/v1/faculty error:", err);
+    alert(err.message)
+  }
   }
 
   async function handleAdd(e) {
