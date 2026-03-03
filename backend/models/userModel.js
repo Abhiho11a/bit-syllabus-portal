@@ -26,7 +26,7 @@ const UserSchema = new mongoose.Schema(
     role: {
       type: String,
       required: [true, "Role is required"],
-      enum: ["admin", "dean", "bos", "autonomous_coordinator", "faculty"],
+      enum: ["admin", "dean", "bos", "coordinator", "faculty"],
     },
 
     // ── Department (null only for admin) ─────────────────────────

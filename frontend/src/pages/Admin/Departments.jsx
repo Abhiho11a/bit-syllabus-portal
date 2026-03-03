@@ -1,17 +1,18 @@
-// pages/admin/Departments.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Building2, LogOut,
   User, Menu, X, ShieldCheck, Search,
   Plus, CheckCircle, AlertCircle, Send,
-  GraduationCap, BookOpen
+  GraduationCap, BookOpen,
+  GitMerge
 } from "lucide-react";
 
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/admin/dashboard",   icon: LayoutDashboard },
   { label:"Users",       path:"/admin/users",        icon: Users           },
   { label:"Departments", path:"/admin/departments",  icon: Building2       },
+  { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
 ];
 
 const MOCK_DEPTS = [

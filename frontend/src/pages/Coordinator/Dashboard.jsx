@@ -5,7 +5,8 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, FileText, LogOut, User,
   Menu, X, CheckCircle, Clock, XCircle,
-  ArrowRight, TrendingUp, Eye, Users, RefreshCw
+  ArrowRight, TrendingUp, Eye, Users, RefreshCw,
+  GitMerge
 } from "lucide-react";
 
 const STATUS_META = {
@@ -18,6 +19,7 @@ const STATUS_META = {
 const NAV_LINKS = [
   { label:"Dashboard", path:"/coordinator/dashboard", icon: LayoutDashboard },
   { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText         },
+  { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
 ];
 
 export default function CoordinatorDashboard() {

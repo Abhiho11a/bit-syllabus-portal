@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/Admin/Dashboard"
 import AdminUsers from "./pages/Admin/Users"
 import AdminDepartments from "./pages/Admin/Departments"
 import AdminSyllabi from "./pages/Admin/Syllabi"
+import MergeFilesModal from "./components/MergeFilesModal"
 export default function App(){
   return(
     <div>
@@ -53,6 +54,9 @@ export default function App(){
         <Route path="/admin/users" element={<AdminUsers/>}/>
         <Route path="/admin/departments" element={<AdminDepartments/>}/>
         <Route path="/admin/syllabi" element={<AdminSyllabi/>}/>
+
+
+        <Route path="/mergefiles" element={<MergeFilesModal/>}/>
       </Routes>
     
     </div>

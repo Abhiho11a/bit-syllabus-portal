@@ -5,7 +5,8 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, ClipboardList, Plus,
   LogOut, User, Menu, X, BookOpen,
-  Send, ChevronLeft, CheckCircle, UserCircle, Building2
+  Send, ChevronLeft, CheckCircle, UserCircle, Building2,
+  GitMerge
 } from "lucide-react";
 
 const NAV_LINKS = [
@@ -13,6 +14,7 @@ const NAV_LINKS = [
   { label:"Assign",      path:"/bos/assign",      icon: Plus            },
   { label:"Assignments", path:"/bos/assignments", icon: ClipboardList   },
   { label:"Faculty",     path:"/bos/faculty",     icon: Users           },
+  { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
 ];
 
 const FACULTY_VIEWS = [

@@ -304,6 +304,9 @@ export default function DeanSyllabi() {
                       <p className="text-xs text-slate-500 mb-0.5">
                         <span className="font-semibold text-slate-700">Faculty: </span>{s.faculty_id?.name}
                       </p>
+                      <p className="text-xs text-slate-500 mb-0.5">
+                        <span className="font-semibold text-slate-700">Assigned by Bos: </span>{s.assigned_by?.name}
+                      </p>
                       <div className="flex items-center gap-2 mb-4">
                         <span className="text-xs text-slate-400">Sem {s.sem}</span>
                         <span className="text-slate-300">·</span>

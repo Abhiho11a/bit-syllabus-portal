@@ -1,14 +1,11 @@
-// pages/admin/Syllabi.jsx
-// View 1: Department grid — stats per dept
-// View 2: Drill into a dept — full syllabus list with delete + view PDF
-
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileText, LogOut, User,
   Menu, X, BookOpen, CheckCircle, Clock, XCircle,
   ArrowRight, Trash2, Eye, Search, RefreshCw,
-  ChevronLeft, Building2, AlertTriangle
+  ChevronLeft, Building2, AlertTriangle,
+  GitMerge
 } from "lucide-react";
 
 const STATUS_META = {
@@ -24,6 +21,7 @@ const NAV_LINKS = [
   { label:"Users",       path:"/admin/users",        icon: Users           },
   { label:"Syllabi",     path:"/admin/syllabi",      icon: FileText        },
 //   { label:"Departments", path:"/admin/departments",  icon: Building2       },
+  { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
 ];
 
 // Dept colors — each dept gets a distinct accent

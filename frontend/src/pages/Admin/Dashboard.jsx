@@ -1,11 +1,11 @@
-// pages/admin/Dashboard.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Building2, Settings,
   LogOut, User, Menu, X, ShieldCheck,
   GraduationCap, BookOpen, FileText,
-  ArrowRight, TrendingUp, CheckCircle
+  ArrowRight, TrendingUp, CheckCircle,
+  GitMerge
 } from "lucide-react";
 import { useEffect } from "react";
 import { useMemo } from "react";
@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { label:"Users",       path:"/admin/users",       icon: Users           },
   { label:"Syllabi",     path:"/admin/syllabi",     icon: FileText },
   // { label:"Departments", path:"/admin/departments", icon: Building2       },
+  { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
 ];
 
 const ROLE_META = {
@@ -84,7 +85,7 @@ export default function AdminDashboard() {
   if (!users.length) return [];
   return [...users]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 5);
+    .slice(0, 3);
 }, [users]);
 
   function handleLogout() {

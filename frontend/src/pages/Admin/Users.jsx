@@ -7,7 +7,8 @@ import {
   LayoutDashboard, Users, Building2, LogOut,
   User, Menu, X, ShieldCheck, Search,
   UserPlus, CheckCircle, AlertCircle, Send, Trash2,
-  FileText
+  FileText,
+  GitMerge
 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -16,6 +17,7 @@ const NAV_LINKS = [
   { label:"Users",       path:"/admin/users",       icon: Users           },
   // { label:"Departments", path:"/admin/departments", icon: Building2       },
   { label:"Syllabi",     path:"/admin/syllabi",     icon: FileText },
+  { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
 ];
 
 const ROLES    = ["faculty", "bos", "coordinator", "dean", "admin"];

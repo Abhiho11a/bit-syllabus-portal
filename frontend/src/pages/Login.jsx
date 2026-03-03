@@ -35,7 +35,7 @@ const ROLES = [
     redirect: "/bos/dashboard",
   },
   {
-    id: "autonomous_coordinator",
+    id: "coordinator",
     label: "Coordinator",
     icon: Users,
     color: "#0f766e",

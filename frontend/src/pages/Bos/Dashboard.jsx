@@ -6,7 +6,8 @@ import {
   LayoutDashboard, Users, ClipboardList, LogOut,
   User, Menu, X, BookOpen, GraduationCap,
   ArrowRight, CheckCircle, Clock, TrendingUp,
-  Plus, Send, RefreshCw, UserCircle, Building2, XCircle
+  Plus, Send, RefreshCw, UserCircle, Building2, XCircle,
+  GitMerge
 } from "lucide-react";
 
 const STATUS_META = {
@@ -21,6 +22,7 @@ const NAV_LINKS = [
   { label:"Assign",      path:"/bos/assign",      icon: Plus            },
   { label:"Assignments", path:"/bos/assignments", icon: ClipboardList   },
   { label:"Faculty",     path:"/bos/faculty",     icon: Users           },
+  { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
 ];
 
 const VIEWS = [

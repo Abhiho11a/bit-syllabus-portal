@@ -4,7 +4,8 @@ import {
   LayoutDashboard, FileText, LogOut, User,
   Menu, X, Users, Search, Eye,
   CheckCircle, XCircle, Clock, RefreshCw,
-  Send, AlertCircle
+  Send, AlertCircle,
+  GitMerge
 } from "lucide-react";
 
 const STATUS_META = {
@@ -23,6 +24,7 @@ const TABS = [
 const NAV_LINKS = [
   { label:"Dashboard", path:"/coordinator/dashboard", icon: LayoutDashboard },
   { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText         },
+  { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
 ];
 
 export default function CoordinatorSyllabi() {
