@@ -437,6 +437,7 @@ app.post("/api/v1/bos",async(req,res) => {
 })
 
 //ADMIN requests
+//fetch all users
 app.get("/api/v1/allusers",async(req,res) => {
   try{
     const data = await User.find()
@@ -444,8 +445,90 @@ app.get("/api/v1/allusers",async(req,res) => {
   }catch(err){
   res.status(500).json({status:"Fail",message:err.message})
 }
-
 })
+// add users it may be fac or bos or dean or coordinator
+app.post("/api/v1/allusers", async (req, res) => {
+  try {
+    const { name, password, role, department } = req.body;
+
+    // ── 1. Validate required fields ──────────────────────────────
+    if (!name || !password || !role) {
+      return res.status(400).json({
+        status: "Fail",
+        message: "name, password, and role are required.",
+      });
+    }
+
+    // ── 2. Validate role is one of the allowed values ────────────
+    const ALLOWED_ROLES = ["faculty", "bos", "coordinator", "dean", "admin"];
+    if (!ALLOWED_ROLES.includes(role)) {
+      return res.status(400).json({
+        status: "Fail",
+        message: `Invalid role. Must be one of: ${ALLOWED_ROLES.join(", ")}`,
+      });
+    }
+
+    // ── 3. Department required for faculty, bos, coordinator ─────
+    const NEEDS_DEPT = ["faculty", "bos", "coordinator"];
+    if (NEEDS_DEPT.includes(role) && !department) {
+      return res.status(400).json({
+        status: "Fail",
+        message: `Department is required for role: ${role}`,
+      });
+    }
+
+    // ── 4. Password length check ─────────────────────────────────
+    if (password.length < 6) {
+      return res.status(400).json({
+        status: "Fail",
+        message: "Password must be at least 6 characters.",
+      });
+    }
+
+    // ── 5. Prevent duplicate — same name + same role + same dept ─
+    const duplicateFilter = { name, role };
+    if (department) duplicateFilter.department = department.toUpperCase();
+
+    const existing = await User.findOne(duplicateFilter);
+    if (existing) {
+      return res.status(409).json({
+        status: "Fail",
+        message: `A ${role} named "${name}" already exists${department ? ` in ${department}` : ""}.`,
+      });
+    }
+
+    // ── 6. Build user object ─────────────────────────────────────
+    const userData = {
+      name,
+      password,   // bcrypt fires via pre("save") hook in User schema
+      role,
+    };
+
+    // Only set department for roles that need it
+    if (NEEDS_DEPT.includes(role) && department) {
+      userData.department = department.toUpperCase();
+    }
+
+    // ── 7. Create user ───────────────────────────────────────────
+    const newUser = await User.create(userData);
+
+    // Strip password from response
+    const { password: _, ...userWithoutPassword } = newUser.toObject();
+
+    return res.status(201).json({
+      status:  "Success",
+      message: `${role.charAt(0).toUpperCase() + role.slice(1)} "${name}" added successfully.`,
+      user:    userWithoutPassword,
+    });
+
+  } catch (err) {
+    console.error("[POST /allusers]", err);
+    return res.status(500).json({
+      status:  "Fail",
+      message: "Server error.",
+    });
+  }
+});
 
 const PORT = process.env.PORT
 app.listen(PORT,"127.0.0.1",()=>{

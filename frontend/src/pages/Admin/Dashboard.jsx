@@ -46,8 +46,8 @@ export default function AdminDashboard() {
         alert(data.message)
     else
     {
-        alert("All users fetched")
-        // console.log(data)
+        // alert("All users fetched")
+        console.log(data.users)
         setUsers(data.users)
     }
   }
@@ -79,6 +79,13 @@ export default function AdminDashboard() {
       totalSyllabi:syllabi.length
     };
   }, [users]);
+
+  const recentUsers = useMemo(() => {
+  if (!users.length) return [];
+  return [...users]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5);
+}, [users]);
 
   function handleLogout() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
@@ -221,7 +228,7 @@ export default function AdminDashboard() {
               </button>
             </div>
             <div className="divide-y divide-slate-50">
-              {users?.map(u => {
+              {recentUsers?.map(u => {
                 const meta = ROLE_META[u.role] || ROLE_META.faculty;
                 return (
                   <div key={u.id} className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors">

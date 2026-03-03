@@ -86,7 +86,6 @@ export default function DeanManageBOS() {
     e.preventDefault();
     if (!form.name || !form.department || !form.password) { alert("Fill all fields"); return; }
     setAdding(true);
-    // TODO: POST /api/v1/users { ...form, role:"bos" }
     // console.log(form)
     const response = await fetch(`http://127.0.0.1:8000/api/v1/bos`,{
         method:"POST",

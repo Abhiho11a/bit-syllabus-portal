@@ -60,7 +60,7 @@ export default function AdminUsers() {
           alert(data.message)
       else
       {
-          alert("All users fetched")
+          // alert("All users fetched")
           console.log(data)
           setUsers(data.users)
       }
@@ -70,9 +70,25 @@ export default function AdminUsers() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
   }
 
-  function handleToggle(id) {
-    setUsers(l => l.map(u => u._id === id ? { ...u, is_active:!u.is_active } : u));
-    // TODO: PATCH /api/v1/users/:id { is_active }
+  async function handleToggle(id) {
+    try{
+      const response = await fetch(`http://127.0.0.1:8000/api/v1/users/${id}`,{
+        method:"PATCH",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      const data = await response.json();
+
+      if(response.ok)
+      {
+        setUsers(l => l.map(u => u._id === id ? { ...u, is_active:!u.is_active } : u));
+      }
+      else
+        throw new Error(data.message)
+    }catch (err) {
+    console.error("POST /api/v1/faculty error:", err);
+    alert(err.message)
+  }
   }
 
   async function handleAdd(e) {
@@ -82,8 +98,19 @@ export default function AdminUsers() {
       alert("Department is required for this role"); return;
     }
     setAdding(true);
-    // TODO: POST /api/v1/users { ...form }
-    await new Promise(r => setTimeout(r, 800));
+
+    try{
+      const response = await fetch(`http://127.0.0.1:8000/api/v1/allUsers`,{
+        method:"POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body:JSON.stringify({...form})
+    })
+    const data = await response.json();
+    // console.log(data)
+    alert(data.message)
+
     setUsers(l => [{
       _id:         `u${Date.now()}`,
       name:        form.name,
@@ -93,6 +120,9 @@ export default function AdminUsers() {
       is_active:   true,
     }, ...l]);
     setForm(BLANK); setShowAdd(false); setAdding(false);
+    }catch(err){
+      alert(err.message)
+    }
   }
 
   const visible = users
