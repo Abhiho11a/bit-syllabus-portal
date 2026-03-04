@@ -8,14 +8,6 @@ import {
   FileText, LogOut, User, Menu, X
 } from "lucide-react";
 
-// ── Mock data — replace with API call ────────────────────────────
-const MOCK_PENDING = [
-  { id:"a1", subject_code:"BCS300", subject_name:"Mathematics III",         sem:3, assigned_date:"2025-07-01", assigned_by:"Prof. Anitha Rao" },
-  { id:"a2", subject_code:"BCS303", subject_name:"Operating Systems",       sem:3, assigned_date:"2025-07-03", assigned_by:"Prof. Anitha Rao" },
-  { id:"a3", subject_code:"CS601",  subject_name:"Machine Learning",        sem:6, assigned_date:"2025-07-05", assigned_by:"Prof. Anitha Rao" },
-  { id:"a4", subject_code:"CS501",  subject_name:"Computer Networks",       sem:5, assigned_date:"2025-06-28", assigned_by:"Prof. Anitha Rao" },
-];
-
 const NAV_LINKS = [
   { label:"Dashboard",     path:"/faculty/dashboard", icon: LayoutDashboard },
   { label:"Pending Tasks", path:"/faculty/pending",   icon: Clock           },
@@ -55,21 +47,78 @@ const user = JSON.parse(localStorage.getItem("user"))
 
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  async function generateSyllabus(task) {
+    openSyllabusForm(task); // just opens the form, nothing else
+  }
+
+  function openSyllabusForm(assignment) {
+    const params = new URLSearchParams({
+      assignmentId: assignment._id,
+      subjectCode:  assignment.subject_code,
+      subjectName:  assignment.subject_name,
+      sem:          String(assignment.sem),
+      faculty:      assignment.faculty_id?.name || "",
+      department:   assignment.department || "",
+      callbackUrl:  window.location.origin + "/faculty/pending",
+    });
+
+    window.open(
+      `https://syllabus-gen-integrated.netlify.app/?${params.toString()}`,
+      "_blank"
+    );
+  }
+
+  function fetchAssignments(){
+      fetch(`http://127.0.0.1:8000/api/v1/assignments?faculty_id=${user?.id}&status=pending`)
+      .then(r => r.json())
+      .then(data => {
+        setTasks(data.assignments);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+    }
+
+  useEffect(() => {
+    const params       = new URLSearchParams(window.location.search);
+    const pdfUrl       = params.get("pdf_url");
+    const assignmentId = params.get("assignmentId");
+
+    if (pdfUrl && assignmentId) {
+      // Clean the URL immediately so it doesn't look messy
+      window.history.replaceState({}, "", window.location.pathname);
+
+      // Call backend to save pdf_url and mark as submitted
+      submitAssignment(assignmentId, pdfUrl);
+    }
+  }, []);
+
+  async function submitAssignment(assignmentId, pdfUrl) {
+    try {
+      const res  = await fetch("http://127.0.0.1:8000/api/v1/submit", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignmentId, pdf_url: pdfUrl }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message);
+
+      // Refresh list — submitted task will disappear from pending
+      fetchAssignments();
+
+    } catch (err) {
+      alert("Failed to save submission: " + err.message);
+    }
+  }
   
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/api/v1/assignments?faculty_id=${user?.id}&status=pending`)
-    .then(r => r.json())
-    .then(data => {
-      setTasks(data.assignments);
-      setLoading(false);
-    })
-    .catch(err => {
-      console.error(err);
-      setLoading(false);
-    });
+    fetchAssignments()
   }, []);
   
-
 const sems     = [...new Set(tasks.map(t => t.sem))].sort();
 const filtered = tasks
     .filter(t => semFilter === "all" || t.sem === Number(semFilter))
@@ -265,23 +314,7 @@ const filtered = tasks
                       </p>
 
                       <button
-                        // onClick={() => navigate(`/faculty/syllabus/${task.id}`)}
-                        onClick={async() => 
-                        {
-                          fetch(`http://127.0.0.1:8000/api/v1/submit`,{method:"PATCH",headers: {
-        "Content-Type": "application/json",
-        // Authorization: `Bearer ${token}`   // if you’re using JWT middleware
-      },
-      body: JSON.stringify({
-        assignmentId:task._id,
-        pdf_url:null
-      })})
-                          .then(r => r.json())
-                          .then(data => {
-                            alert(data.message)
-                          })
-                        }
-                        }
+                        onClick={()=>generateSyllabus(task)}
                         className="w-full flex items-center justify-center gap-2
                                    bg-[#0f2744] text-white text-sm font-bold py-2.5 rounded-xl
                                    hover:bg-[#1e3a5f] transition-all hover:-translate-y-0.5 cursor-pointer"

@@ -31,8 +31,6 @@ const ROLE_META = {
   admin:       { color:"#dc2626", bg:"#fef2f2" },
 };
 
-
-
 const BLANK = { name:"", role:"faculty", department:"", subject_code:"", password:"" };
 
 export default function AdminUsers() {
@@ -113,15 +111,20 @@ export default function AdminUsers() {
     // console.log(data)
     alert(data.message)
 
-    setUsers(l => [{
-      _id:         `u${Date.now()}`,
-      name:        form.name,
-      role:        form.role,
-      department:  form.department,
-      subject_code:form.subject_code,
-      is_active:   true,
-    }, ...l]);
-    setForm(BLANK); setShowAdd(false); setAdding(false);
+    if(data.status === "Success")
+    {
+      setUsers(l => [{
+        _id:         `u${Date.now()}`,
+        name:        form.name,
+        role:        form.role,
+        department:  form.department,
+        subject_code:form.subject_code,
+        is_active:   true,
+      }, ...l]);
+      setForm(BLANK); 
+      setShowAdd(false); 
+    }
+    setAdding(false);
     }catch(err){
       alert(err.message)
     }

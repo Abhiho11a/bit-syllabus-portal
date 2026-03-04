@@ -398,8 +398,9 @@ export default function BosAssignments() {
                       <div className="flex items-center gap-2">
                         <button
                           title={a.pdf_url ? "View submission" : "Not submitted yet"}
-                          onClick={() => a.pdf_url && window.open(a.pdf_url, "_blank")}
-                          className={`w-8 h-8 rounded-lg border flex items-center justify-center
+                          onClick={() => {
+                            if (!a.pdf_url) return;
+                            window.open(a.pdf_url, "_blank");                          }}                          className={`w-8 h-8 rounded-lg border flex items-center justify-center
                                       transition-colors
                                       ${a.pdf_url
                                         ? "bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200 cursor-pointer"
