@@ -6,6 +6,7 @@ import cors from "cors"
 import User from "./models/userModel.js"
 import Assignment from "./models/assignmentModel.js"
 import bcrypt from "bcryptjs"
+import mongoose from "mongoose"
 
 const app = express();
 app.use(express.json());
@@ -289,10 +290,11 @@ app.post("/api/v1/assignments",async(req,res) => {
 app.get("/api/v1/assignments",async(req,res) => {
   try {
     const { faculty_id, status, department } = req.query;
+    // console.log(req.query)
 
     const query = {};
-    if (faculty_id)  query.faculty_id  = faculty_id;
-    if (status)      query.status      = status;
+    if (faculty_id)  query.faculty_id  = new mongoose.Types.ObjectId(faculty_id);
+    if (status)      query.status      = status.toLowerCase();
     if (department)  query.department  = department.toUpperCase();
 
     const assignments = await Assignment
