@@ -11,6 +11,8 @@ import {
   GitMerge
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const STATUS_META = {
   pending:   { label:"Pending",   color:"#f59e0b", bg:"#fffbeb", border:"#fcd34d", icon: Clock        },
   submitted: { label:"Submitted", color:"#2563eb", bg:"#eff6ff", border:"#bae6fd", icon: ClipboardList },
@@ -67,7 +69,7 @@ export default function BosAssignments() {
         ? `assigned_by=${user?.id}`
         : `department=${user?.department}`;
 
-      const res  = await fetch(`http://127.0.0.1:8000/api/v1/assignments?${query}`);
+      const res  = await fetch(`${API_URL}/api/v1/assignments?${query}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Failed to fetch");
       setData(json.assignments || []);
@@ -83,7 +85,7 @@ export default function BosAssignments() {
     if (!confirm("Delete this assignment? The faculty will lose this pending task.")) return;
     setDeletingId(id);
     try {
-      const res  = await fetch(`http://127.0.0.1:8000/api/v1/assignments/${id}`, {
+      const res  = await fetch(`${API_URL}/api/v1/assignments/${id}`, {
         method: "DELETE",
       });
       const json = await res.json();

@@ -8,6 +8,8 @@ import {
   TrendingUp, RefreshCw, GraduationCap
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const NAV_LINKS = [
   { label:"Dashboard",  path:"/dean/dashboard", icon: LayoutDashboard },
   { label:"Syllabi",    path:"/dean/syllabi",    icon: FileText        },
@@ -42,7 +44,7 @@ export default function DeanDashboard() {
     setError("");
     try {
       // Dean fetches all — no filters
-      const res  = await fetch("http://127.0.0.1:8000/api/v1/assignments");
+      const res  = await fetch(`${API_URL}/api/v1/assignments`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch");
 

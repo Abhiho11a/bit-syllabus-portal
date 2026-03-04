@@ -9,6 +9,8 @@ import {
   GitMerge
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/bos/dashboard",  icon: LayoutDashboard },
   { label:"Assign",      path:"/bos/assign",      icon: Plus            },
@@ -40,7 +42,7 @@ export default function BosAssign() {
   // Fetch ALL faculty in this dept once — filter client-side
   useEffect(() => {
     if (!user?.department) return;
-    fetch(`http://127.0.0.1:8000/api/v1/users?role=faculty&department=${user.department}`)
+    fetch(`${API_URL}/api/v1/users?role=faculty&department=${user.department}`)
       .then(r => r.json())
       .then(data => setAllFaculty(data.users || []))
       .catch(err => console.error("Failed to load faculty:", err));
@@ -73,7 +75,7 @@ export default function BosAssign() {
     }
     setLoading(true);
     try {
-      const res  = await fetch("http://127.0.0.1:8000/api/v1/assignments", {
+      const res  = await fetch(`${API_URL}/api/v1/assignments`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

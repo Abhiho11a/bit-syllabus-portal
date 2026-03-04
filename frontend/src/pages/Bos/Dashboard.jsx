@@ -10,6 +10,8 @@ import {
   GitMerge
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const STATUS_META = {
   pending:   { label:"Pending",   color:"#f59e0b", bg:"#fffbeb", border:"#fcd34d", icon: Clock        },
   submitted: { label:"Submitted", color:"#2563eb", bg:"#eff6ff", border:"#bae6fd", icon: ClipboardList },
@@ -54,7 +56,7 @@ export default function BosDashboard() {
   // Also fetch faculty for modal on mount
   useEffect(() => {
     if (!user?.department) return;
-    fetch(`http://127.0.0.1:8000/api/v1/users?role=faculty&department=${user.department}`)
+    fetch(`${API_URL}/api/v1/users?role=faculty&department=${user.department}`)
       .then(r => r.json())
       .then(d => setModalFac(d.users || []))
       .catch(() => {});
@@ -67,7 +69,7 @@ export default function BosDashboard() {
       const query = currentView === "mine"
         ? `assigned_by=${user?._id}`
         : `department=${user?.department}`;
-      const res  = await fetch(`http://127.0.0.1:8000/api/v1/assignments?${query}`);
+      const res  = await fetch(`${API_URL}/api/v1/assignments?${query}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Failed to fetch");
       setAllData(json.assignments || []);
@@ -109,7 +111,7 @@ export default function BosDashboard() {
     }
     setAssigning(true);
     try {
-      const res  = await fetch("http://127.0.0.1:8000/api/v1/assignments", {
+      const res  = await fetch(`${API_URL}/api/v1/assignments`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

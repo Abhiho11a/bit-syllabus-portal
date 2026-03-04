@@ -10,6 +10,8 @@ import {
 import { useEffect } from "react";
 import { useMemo } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/admin/dashboard",   icon: LayoutDashboard },
   { label:"Users",       path:"/admin/users",       icon: Users           },
@@ -39,7 +41,7 @@ export default function AdminDashboard() {
   },[])
 
   async function fetchAllUsers(){
-    const response = await fetch("http://127.0.0.1:8000/api/v1/allusers")
+    const response = await fetch(`${API_URL}/api/v1/allusers`)
 
     const data = await response.json();
 
@@ -56,7 +58,7 @@ export default function AdminDashboard() {
   async function fetchAssignmentCnt() {
     try {
       // Admin fetches ALL — no filter
-      const res  = await fetch("http://127.0.0.1:8000/api/v1/assignments");
+      const res  = await fetch(`${API_URL}/api/v1/assignments`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch");
       setSyllabi(data.assignments)

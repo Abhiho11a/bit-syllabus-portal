@@ -12,6 +12,7 @@ import {
   GitMerge
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
 
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/bos/dashboard",  icon: LayoutDashboard },
@@ -42,7 +43,7 @@ export default function BosFaculty() {
 
   async function fetchFaculty(){
     try{
-    const response = await fetch(`http://127.0.0.1:8000/api/v1/users?role=faculty&department=${user?.department}&created_by=${user?.id}`,{
+    const response = await fetch(`${API_URL}/api/v1/users?role=faculty&department=${user?.department}&created_by=${user?.id}`,{
       method:"GET",
       headers: { "Content-Type": "application/json"}
     })
@@ -71,7 +72,7 @@ export default function BosFaculty() {
 
   async function handleToggleActive(id) {
     try{
-      const response = await fetch(`http://127.0.0.1:8000/api/v1/users/${id}`,{
+      const response = await fetch(`${API_URL}/api/v1/users/${id}`,{
         method:"PATCH",
         headers: { "Content-Type": "application/json" },
       })
@@ -100,7 +101,7 @@ export default function BosFaculty() {
     }
     setAdding(true);
     try {
-      const res  = await fetch("http://127.0.0.1:8000/api/v1/faculty", {
+      const res  = await fetch(`${API_URL}/api/v1/faculty`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({

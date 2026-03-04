@@ -8,6 +8,8 @@ import {
   GitMerge
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const STATUS_META = {
   submitted: { label:"Under Review", color:"#2563eb", bg:"#eff6ff", border:"#bae6fd", icon: Clock       },
   approved:  { label:"Approved",     color:"#059669", bg:"#ecfdf5", border:"#6ee7b7", icon: CheckCircle  },
@@ -52,7 +54,7 @@ export default function CoordinatorSyllabi() {
     setLoading(true); setError("");
     try {
       const res  = await fetch(
-        `http://127.0.0.1:8000/api/v1/assignments?department=${user?.department}`
+        `${API_URL}/api/v1/assignments?department=${user?.department}`
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch");
@@ -69,7 +71,7 @@ export default function CoordinatorSyllabi() {
     setActionLoading(l => ({ ...l, [s._id]:"approve" }));
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/api/v1/assignments/${s._id}/review`,
+        `${API_URL}/api/v1/assignments/${s._id}/review`,
         {
           method:  "PATCH",
           headers: { "Content-Type":"application/json" },
@@ -101,7 +103,7 @@ export default function CoordinatorSyllabi() {
     setSubmitting(true);
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/api/v1/assignments/${rejectModal._id}/review`,
+        `${API_URL}/api/v1/assignments/${rejectModal._id}/review`,
         {
           method:  "PATCH",
           headers: { "Content-Type":"application/json" },

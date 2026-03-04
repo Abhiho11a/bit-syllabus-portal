@@ -9,6 +9,8 @@ import {
   GitMerge
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const STATUS_META = {
   submitted: { label:"Under Review", color:"#2563eb", bg:"#eff6ff", border:"#bae6fd", icon: Clock      },
   approved:  { label:"Approved",     color:"#059669", bg:"#ecfdf5", border:"#6ee7b7", icon: CheckCircle },
@@ -38,7 +40,7 @@ export default function CoordinatorDashboard() {
     setError("");
     try {
       const res  = await fetch(
-        `http://127.0.0.1:8000/api/v1/assignments?department=${user?.department}`
+        `${API_URL}/api/v1/assignments?department=${user?.department}`
       );
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Failed to fetch");

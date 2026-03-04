@@ -7,7 +7,8 @@ import {
   FileText, LogOut, User, Menu, X, RefreshCw,
   RotateCcw, Eye, AlertCircle, Loader2
 } from "lucide-react";
-import API from "../../config";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const NAV_LINKS = [
   { label:"Dashboard",     path:"/faculty/dashboard", icon: LayoutDashboard },
@@ -52,7 +53,7 @@ export default function FacultyPending() {
   // ── Fetch all pending assignments ──────────────────────────────
   function fetchAssignments() {
     setLoading(true);
-    fetch(`http://127.0.0.1:8000/api/v1/assignments?faculty_id=${user?.id}&status=pending`)
+    fetch(`${API_URL}/api/v1/assignments?faculty_id=${user?.id}&status=pending`)
       .then(r => r.json())
       .then(data => {
         console.log(data)
@@ -85,7 +86,7 @@ export default function FacultyPending() {
   async function submitAssignment(assignmentId, pdfUrl) {
     setSubmitting(true);
     try {
-      const res  = await fetch(`http://127.0.0.1:8000/api/v1/submit`, {
+      const res  = await fetch(`${API_URL}/api/v1/submit`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assignmentId, pdf_url: pdfUrl }),

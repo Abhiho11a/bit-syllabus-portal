@@ -10,6 +10,8 @@ import {
   Clock, RefreshCw, Send, AlertCircle
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/dean/dashboard",  icon: LayoutDashboard },
   { label:"Syllabi",     path:"/dean/syllabi",     icon: FileText        },
@@ -60,7 +62,7 @@ export default function DeanSyllabi() {
     setLoading(true); setError("");
     try {
       // No dept filter — dean sees all assignments
-      const res  = await fetch("http://127.0.0.1:8000/api/v1/assignments");
+      const res  = await fetch(`${API_URL}/api/v1/assignments`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed");
 
@@ -87,7 +89,7 @@ export default function DeanSyllabi() {
     setActionLoading(l => ({ ...l, [s._id]:"approve" }));
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/api/v1/assignments/${s._id}/review`,
+        `${API_URL}/api/v1/assignments/${s._id}/review`,
         { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ status:"approved", remark:"" }) }
       );
       const data = await res.json();
@@ -102,7 +104,7 @@ export default function DeanSyllabi() {
     setSubmitting(true);
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/api/v1/assignments/${rejectModal._id}/review`,
+        `${API_URL}/api/v1/assignments/${rejectModal._id}/review`,
         { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ status:"rejected", remark }) }
       );
       const data = await res.json();

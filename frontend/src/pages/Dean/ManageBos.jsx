@@ -10,6 +10,8 @@ import {
   Send, BookOpen
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/dean/dashboard",  icon: LayoutDashboard },
   { label:"Syllabi",     path:"/dean/syllabi",     icon: FileText        },
@@ -35,7 +37,7 @@ export default function DeanManageBOS() {
   const setF = (k) => (v) => setForm(f => ({ ...f, [k]:v }));
 
   async function fetchAllBos() {
-    const response = await fetch(`http://127.0.0.1:8000/api/v1/bos`,{
+    const response = await fetch(`${API_URL}/api/v1/bos`,{
         method:"GET",
         headers: {
             "Content-Type": "application/json",
@@ -62,7 +64,7 @@ export default function DeanManageBOS() {
 
   async function handleToggle(id) {
     try{
-      const response = await fetch(`http://127.0.0.1:8000/api/v1/users/${id}`,{
+      const response = await fetch(`${API_URL}/api/v1/users/${id}`,{
         method:"PATCH",
         headers: { "Content-Type": "application/json" },
       })
@@ -87,7 +89,7 @@ export default function DeanManageBOS() {
     if (!form.name || !form.department || !form.password) { alert("Fill all fields"); return; }
     setAdding(true);
     // console.log(form)
-    const response = await fetch(`http://127.0.0.1:8000/api/v1/bos`,{
+    const response = await fetch(`${API_URL}/api/v1/bos`,{
         method:"POST",
         headers: {
             "Content-Type": "application/json",

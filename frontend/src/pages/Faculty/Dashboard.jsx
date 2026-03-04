@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const NAV_LINKS = [
   { label:"Dashboard",     path:"/faculty/dashboard", icon: LayoutDashboard },
   { label:"Pending Tasks", path:"/faculty/pending",   icon: Clock           },
@@ -31,7 +33,7 @@ export default function FacultyDashboard() {
     try {
       // fetch ALL assignments for this faculty
       const res  = await fetch(
-        `http://127.0.0.1:8000/api/v1/assignments?faculty_id=${user?.id}`
+        `${API_URL}/api/v1/assignments?faculty_id=${user?.id}`
       );
       const data = await res.json();
       const all  = data.assignments || [];

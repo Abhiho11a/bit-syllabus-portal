@@ -8,6 +8,8 @@ import {
   GitMerge
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const STATUS_META = {
   pending:   { label:"Pending",      color:"#f59e0b", bg:"#fffbeb", border:"#fcd34d", icon: Clock       },
   submitted: { label:"Under Review", color:"#2563eb", bg:"#eff6ff", border:"#bae6fd", icon: Clock       },
@@ -57,7 +59,7 @@ export default function AdminSyllabi() {
     setError("");
     try {
       // Admin fetches ALL — no filter
-      const res  = await fetch("http://127.0.0.1:8000/api/v1/assignments");
+      const res  = await fetch(`${API_URL}/api/v1/assignments`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Failed to fetch");
       setAllData(json.assignments || []);
@@ -117,7 +119,7 @@ export default function AdminSyllabi() {
     setDeletingId(id);
     setDeleteConfirm(null);
     try {
-      const res  = await fetch(`http://127.0.0.1:8000/api/v1/assignments/${id}`, {
+      const res  = await fetch(`${API_URL}/api/v1/assignments/${id}`, {
         method: "DELETE",
       });
       const json = await res.json();

@@ -9,6 +9,8 @@ import {
   User, Menu, X
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const STATUS_META = {
   approved:  { label:"Approved",       color:"#059669", bg:"#ecfdf5", border:"#6ee7b7", icon: CheckCircle },
   rejected:  { label:"Needs Revision", color:"#dc2626", bg:"#fef2f2", border:"#fca5a5", icon: XCircle     },
@@ -45,7 +47,7 @@ export default function FacultySubmitted() {
     setLoading(true); setError("");
     try {
       const res  = await fetch(
-        `http://127.0.0.1:8000/api/v1/assignments?faculty_id=${user?.id}`
+        `${API_URL}/api/v1/assignments?faculty_id=${user?.id}`
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch");
