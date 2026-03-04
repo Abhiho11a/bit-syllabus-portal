@@ -118,7 +118,7 @@ export default function FacultyPending() {
       sem:          String(assignment.sem),
       faculty:      assignment.faculty_id?.name || user?.name || "",
       department:   assignment.department || user?.department || "",
-      callbackUrl:  window.location.origin + "/faculty/pending",
+      callbackUrl:  "https://syllabus-portal.netlify.app" + "/faculty/pending",
     });
     window.location.href = `https://syllabus-gen-integrated.netlify.app/?${params.toString()}`;
   }
