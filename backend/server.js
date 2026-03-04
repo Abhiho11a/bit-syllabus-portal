@@ -532,7 +532,7 @@ app.post("/api/v1/allusers", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT
-app.listen(PORT,"127.0.0.1",()=>{
+const PORT = process.env.PORT || 8000
+app.listen(PORT,()=>{
     console.log(`Listening to the PORT:${PORT}\nhttp://127.0.0.1:${PORT}/`)
 })
