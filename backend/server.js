@@ -14,6 +14,7 @@ app.use(cors())
 connectDb()
 
 app.get("/",(req,res)=>{
+    console.log("✅ Root hit — backend is alive");
     res.send("Hello from backend")
 })
 app.post("/api/v1/auth/login", async (req, res) => {
