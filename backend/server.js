@@ -27,7 +27,7 @@ app.post("/api/v1/auth/login", async (req, res) => {
     if (role === "faculty") {
       query.name         = name;
       query.department   = department?.toUpperCase();
-    } else if (role === "bos" || role === "autonomous_coordinator") {
+    } else if (role === "bos" || role === "autonomous_coordinator" || role === "coordinator") {
       query.name       = name;
       query.department = department?.toUpperCase();
     } else if (role === "dean") {
