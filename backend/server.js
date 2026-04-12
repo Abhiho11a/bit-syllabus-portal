@@ -13,6 +13,11 @@ app.use(express.json());
 app.use(cors())
 connectDb()
 
+app.use((req, res, next) => {
+  console.log(`→ ${req.method} ${req.url}`);
+  next();
+});
+
 app.get("/",(req,res)=>{
     console.log("✅ Root hit — backend is alive");
     res.send("Hello from backend")
@@ -168,6 +173,28 @@ app.post("/api/v1/faculty", async (req, res) => {
     });
   }
 });
+// DELETE Faculty
+app.delete("/api/v1/faculty/:id", async (req, res) => {
+  try {
+    const faculty = await User.findOneAndDelete({ 
+      _id: req.params.id, 
+      role: "faculty" 
+    });
+
+    if (!faculty) {
+      return res.status(404).json({ status: "Fail", message: "Faculty not found." });
+    }
+
+    return res.status(200).json({
+      status:  "Success",
+      message: `Faculty "${faculty.name}" permanently deleted.`,
+    });
+
+  } catch (err) {
+    console.error("[DELETE /faculty/:id]", err);
+    return res.status(500).json({ status: "Fail", message: "Server error." });
+  }
+});
 //TOGGLE active status of the faculty and BOS
 app.patch("/api/v1/users/:id", async (req, res) => {
   try {
@@ -208,21 +235,28 @@ app.get("/api/v1/assignments", async (req, res) => {
   try {
     const { assigned_by, department, faculty_id } = req.query;
 
-    // Build filter — only add field if value is a real non-empty string
-    // Guards against "undefined" or "" being cast to ObjectId (causes CastError)
     const filter = {};
-    if (assigned_by && assigned_by !== "undefined" && assigned_by !== "null")
-      filter.assigned_by = assigned_by;
-    if (department  && department  !== "undefined" && department  !== "null")
-      filter.department  = department.toUpperCase();
-    if (faculty_id  && faculty_id  !== "undefined" && faculty_id  !== "null")
-      filter.faculty_id  = faculty_id;
+
+    // ✅ Convert string IDs to ObjectId — this was causing the 404/empty result
+    if (assigned_by && assigned_by !== "undefined" && assigned_by !== "null") {
+      try {
+        filter.assigned_by = new mongoose.Types.ObjectId(assigned_by);
+      } catch { /* invalid id — skip */ }
+    }
+    if (department && department !== "undefined" && department !== "null") {
+      filter.department = department.toUpperCase();
+    }
+    if (faculty_id && faculty_id !== "undefined" && faculty_id !== "null") {
+      try {
+        filter.faculty_id = new mongoose.Types.ObjectId(faculty_id);
+      } catch { /* invalid id — skip */ }
+    }
 
     const data = await Assignment
       .find(filter)
-      .populate("faculty_id",  "name department")  // faculty name in rows
-      .populate("assigned_by", "name")             // BOS name in dept view
-      .sort({ createdAt: -1 });                    // newest first
+      .populate("faculty_id",  "name department")
+      .populate("assigned_by", "name")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       status:      "Success",
@@ -286,36 +320,54 @@ app.post("/api/v1/assignments",async(req,res) => {
     return res.status(500).json({ message: "Server error." });
   }
 })
-
-//FACULTY requests
-app.get("/api/v1/assignments",async(req,res) => {
+app.delete("/api/v1/assignments/:id", async (req, res) => {
   try {
-    const { faculty_id, status, department } = req.query;
-    // console.log(req.query)
+    const assignment = await Assignment.findByIdAndDelete(req.params.id);
 
-    const query = {};
-    if (faculty_id)  query.faculty_id  = new mongoose.Types.ObjectId(faculty_id);
-    if (status)      query.status      = status.toLowerCase();
-    if (department)  query.department  = department.toUpperCase();
-
-    const assignments = await Assignment
-      .find(query)
-      .populate("assigned_by", "name department")  // get BOS name
-      .populate("faculty_id",  "name subject_code") // get faculty name
-      .sort({ createdAt: -1 });                     // newest first
-      // console.log(assignments)
+    if (!assignment) {
+      return res.status(404).json({ message: "Assignment not found." });
+    }
 
     return res.status(200).json({
-      status: "Success",
-      count:  assignments.length,
-      assignments,
+      status:  "Success",
+      message: "Assignment deleted successfully.",
     });
 
   } catch (err) {
-    console.error("[GET /assignments]", err);
+    console.error("[DELETE /assignments/:id]", err);
     return res.status(500).json({ message: "Server error." });
   }
-})
+});
+
+//FACULTY requests
+// app.get("/api/v1/assignments",async(req,res) => {
+//   try {
+//     const { faculty_id, status, department } = req.query;
+//     // console.log(req.query)
+
+//     const query = {};
+//     if (faculty_id)  query.faculty_id  = new mongoose.Types.ObjectId(faculty_id);
+//     if (status)      query.status      = status.toLowerCase();
+//     if (department)  query.department  = department.toUpperCase();
+
+//     const assignments = await Assignment
+//       .find(query)
+//       .populate("assigned_by", "name department")  // get BOS name
+//       .populate("faculty_id",  "name subject_code") // get faculty name
+//       .sort({ createdAt: -1 });                     // newest first
+//       // console.log(assignments)
+
+//     return res.status(200).json({
+//       status: "Success",
+//       count:  assignments.length,
+//       assignments,
+//     });
+
+//   } catch (err) {
+//     console.error("[GET /assignments]", err);
+//     return res.status(500).json({ message: "Server error." });
+//   }
+// })
 
 app.patch("/api/v1/submit",async(req,res)=>{
   try {
@@ -355,7 +407,7 @@ app.patch("/api/v1/submit",async(req,res)=>{
 // PATCH /api/v1/assignments/:id/review
 app.patch("/api/v1/assignments/:id/review", async (req, res) => {
   try {
-    const { status, remark } = req.body;
+    const { status, remark, pdf_url } = req.body;  // ← add pdf_url
 
     if (!["approved", "rejected"].includes(status)) {
       return res.status(400).json({ message: "Status must be 'approved' or 'rejected'." });
@@ -366,18 +418,14 @@ app.patch("/api/v1/assignments/:id/review", async (req, res) => {
     }
 
     const assignment = await Assignment.findById(req.params.id);
-
     if (!assignment) {
       return res.status(404).json({ message: "Assignment not found." });
     }
-    if (assignment.status !== "submitted") {
-      return res.status(400).json({
-        message: `Cannot review — current status is '${assignment.status}'.`
-      });
-    }
 
+    // ← REMOVED the strict "must be submitted" check so dean can approve too
     assignment.status = status;
     assignment.remark = remark?.trim() || "";
+    if (pdf_url) assignment.pdf_url = pdf_url;  // ← save new Cloudinary URL
     await assignment.save();
 
     return res.status(200).json({
