@@ -9,6 +9,8 @@ import {
   Search, Eye, CheckCircle, XCircle,
   Clock, RefreshCw, Send, AlertCircle
 } from "lucide-react";
+import barcodeImg from "../../assets/barcode.jpeg"
+import { PDFDocument, rgb } from "pdf-lib";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -85,19 +87,158 @@ export default function DeanSyllabi() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
   }
 
-  async function handleApprove(s) {
-    setActionLoading(l => ({ ...l, [s._id]:"approve" }));
-    try {
-      const res = await fetch(
-        `${API_URL}/api/v1/assignments/${s._id}/review`,
-        { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ status:"approved", remark:"" }) }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      setSyllabi(prev => prev.map(a => a._id === s._id ? { ...a, status:"approved", remark:"" } : a));
-    } catch (err) { alert("Failed: " + err.message); }
-    finally { setActionLoading(l => ({ ...l, [s._id]:null })); }
+  // async function handleApprove(s) {
+  //   setActionLoading(l => ({ ...l, [s._id]:"approve" }));
+  //   try {
+  //     const res = await fetch(
+  //       `${API_URL}/api/v1/assignments/${s._id}/review`,
+  //       { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ status:"approved", remark:"" }) }
+  //     );
+  //     const data = await res.json();
+  //     if (!res.ok) throw new Error(data.message);
+  //     setSyllabi(prev => prev.map(a => a._id === s._id ? { ...a, status:"approved", remark:"" } : a));
+  //   } catch (err) { alert("Failed: " + err.message); }
+  //   finally { setActionLoading(l => ({ ...l, [s._id]:null })); }
+  // }
+
+
+// ── HELPER: upload PDF bytes → Cloudinary (same pattern as your existing code) ──
+async function uploadPDFToCloudinary(pdfBytes, assignmentId) {
+  const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+  const pdfFile = new File([pdfBlob], `approved_${assignmentId}.pdf`, {
+    type: "application/pdf",
+  });
+
+  const fd = new FormData();
+  fd.append("file",          pdfFile);
+  fd.append("upload_preset", "v1conote");          // ← your existing preset
+  fd.append("folder",        "syllabi");
+  fd.append("public_id",     `approved_${assignmentId}`);
+
+  const cloudRes  = await fetch(
+    "https://api.cloudinary.com/v1_1/dxsgtzp7i/image/upload", // ← your cloud name
+    { method: "POST", body: fd }
+  );
+  const cloudData = await cloudRes.json();
+
+  if (!cloudData.secure_url) throw new Error("Cloudinary upload failed");
+
+  // ← same URL fix pattern you already use
+  let pdfUrl = cloudData.secure_url;
+  pdfUrl = pdfUrl.replace("/image/upload/", "/image/upload/");
+  if (!pdfUrl.endsWith(".pdf")) pdfUrl += ".pdf";
+
+  return pdfUrl;
+}
+
+// ── HELPER: fetch barcode asset as bytes ──────────────────────────────────
+async function loadBarcodeBytes(src) {
+  const response = await fetch(src);
+  const blob     = await response.blob();
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+// ── MAIN APPROVE HANDLER ──────────────────────────────────────────────────
+async function handleApprove(s) {
+  setActionLoading(l => ({ ...l, [s._id]: "approve" }));
+
+  try {
+    // 1. Fetch existing PDF from Cloudinary URL stored in DB
+    const pdfRes = await fetch(s.pdf_url);
+    if (!pdfRes.ok) throw new Error("Could not fetch PDF");
+    const pdfBytes = await pdfRes.arrayBuffer();
+
+    // 2. Load into pdf-lib
+    const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+    const pages  = pdfDoc.getPages();
+
+    // 3. Embed barcode JPEG
+    const barcodeBytes = await loadBarcodeBytes(barcodeImg);
+    const barcodeImage = await pdfDoc.embedJpg(barcodeBytes); // ✅ .jpeg = embedJpg
+
+    // 4. Date stamp
+    const formatted = new Date().toLocaleString("en-IN", {
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+
+    // 5. Stamp every page with barcode + date + page number
+    pages.forEach((page, i) => {
+      const { width } = page.getSize();
+
+      // background strip
+      page.drawRectangle({
+        x: 0,
+        y: 0,
+        width: width,
+        height: 30,
+        color: rgb(1, 1, 1)
+      });
+
+      let textX = 20;
+
+      // 🔥 BARCODE (ONLY FOR DEAN)
+      if (barcodeImage) {
+        page.drawImage(barcodeImage, {
+          x: 30,
+          y: 5,
+          width: 60,
+          height: 20,
+        });
+
+        textX = 90; // shift text if barcode exists
+      }
+
+      // Generated text
+      page.drawText(`Generated on: ${formatted}`, {
+        x: textX,
+        y: 10,
+        size: 9,
+        color: rgb(0, 0, 0),
+      });
+
+      // Page number (RIGHT)
+      page.drawText(`${i + 1} / ${pages.length}`, {
+        x: width - 60,
+        y: 10,
+        size: 10,
+        color: rgb(0, 0, 0),
+      });
+  });
+
+    // 6. Save modified PDF
+    const modifiedBytes = await pdfDoc.save();
+
+    // 7. Upload to Cloudinary → get new URL
+    const newPdfUrl = await uploadPDFToCloudinary(modifiedBytes, s._id);
+
+    // 8. PATCH backend — update status + new pdf_url in DB
+    const res = await fetch(`${API_URL}/api/v1/assignments/${s._id}/review`, {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        status:  "approved",
+        pdf_url: newPdfUrl,   // ← updated URL saved in DB
+      }),
+    });
+    if (!res.ok) throw new Error("Approval failed");
+
+    // 9. Update UI
+    setSyllabi(prev =>
+      prev.map(a =>
+        a._id === s._id
+          ? { ...a, status: "approved", pdf_url: newPdfUrl }
+          : a
+      )
+    );
+
+  } catch (err) {
+    console.error(err);
+    alert("Approval failed: " + err.message);
+  } finally {
+    setActionLoading(l => ({ ...l, [s._id]: null }));
   }
+}
 
   async function handleReject() {
     if (!remark.trim()) return;

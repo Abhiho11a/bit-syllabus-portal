@@ -8,7 +8,9 @@ import {
   User, Menu, X, ShieldCheck, Search,
   UserPlus, CheckCircle, AlertCircle, Send, Trash2,
   FileText,
-  GitMerge
+  GitMerge,
+  LayoutList,
+  Layers
 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -17,13 +19,12 @@ const API_URL = import.meta.env.VITE_API_URL;
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/admin/dashboard",  icon: LayoutDashboard },
   { label:"Users",       path:"/admin/users",       icon: Users           },
-  // { label:"Departments", path:"/admin/departments", icon: Building2       },
   { label:"Syllabi",     path:"/admin/syllabi",     icon: FileText },
-  { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
+  { label:"Merge Files", path:"/mergefiles",        icon: GitMerge        },
 ];
 
-const ROLES    = ["faculty", "bos", "coordinator", "dean", "admin"];
-const DEPTS    = ["CSE", "ISE", "ECE", "MECH", "CIVIL"];
+const ROLES = ["faculty", "bos", "coordinator", "dean", "admin"];
+const DEPTS = ["CSE", "ISE", "ECE", "MECH", "CIVIL"];
 
 const ROLE_META = {
   faculty:     { color:"#2563eb", bg:"#eff6ff" },
@@ -31,6 +32,15 @@ const ROLE_META = {
   coordinator: { color:"#0f766e", bg:"#f0fdfa" },
   dean:        { color:"#d97706", bg:"#fffbeb" },
   admin:       { color:"#dc2626", bg:"#fef2f2" },
+};
+
+const DEPT_META = {
+  CSE:   { color:"#2563eb", bg:"#eff6ff", accent:"#3b82f6" },
+  ISE:   { color:"#7c3aed", bg:"#f5f3ff", accent:"#8b5cf6" },
+  ECE:   { color:"#0f766e", bg:"#f0fdfa", accent:"#14b8a6" },
+  MECH:  { color:"#d97706", bg:"#fffbeb", accent:"#f59e0b" },
+  CIVIL: { color:"#dc2626", bg:"#fef2f2", accent:"#ef4444" },
+  "—":   { color:"#64748b", bg:"#f8fafc", accent:"#94a3b8" },
 };
 
 const BLANK = { name:"", role:"faculty", department:"", subject_code:"", password:"" };
@@ -46,51 +56,37 @@ export default function AdminUsers() {
   const [showAdd,     setShowAdd]       = useState(false);
   const [form,        setForm]          = useState(BLANK);
   const [adding,      setAdding]        = useState(false);
+  // NEW: view mode toggle
+  const [viewMode,    setViewMode]      = useState("role"); // "role" | "department"
 
   const setF = (k) => (v) => setForm(f => ({ ...f, [k]:v }));
 
-  useEffect(()=>{
-      fetchAllUsers();
-    },[])
-  
-    async function fetchAllUsers(){
-      const response = await fetch(`${API_URL}/api/v1/allusers`)
-  
-      const data = await response.json();
-  
-      if(!response.ok)
-          alert(data.message)
-      else
-      {
-          // alert("All users fetched")
-          console.log(data)
-          setUsers(data.users)
-      }
-    }
+  useEffect(()=>{ fetchAllUsers(); }, []);
+
+  async function fetchAllUsers(){
+    const response = await fetch(`${API_URL}/api/v1/allusers`);
+    const data = await response.json();
+    if(!response.ok) alert(data.message);
+    else setUsers(data.users);
+  }
 
   function handleLogout() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
   }
 
   async function handleToggle(id) {
-    try{
+    try {
       const response = await fetch(`${API_URL}/api/v1/users/${id}`,{
         method:"PATCH",
         headers: { "Content-Type": "application/json" },
-      })
-
+      });
       const data = await response.json();
-
       if(response.ok)
-      {
         setUsers(l => l.map(u => u._id === id ? { ...u, is_active:!u.is_active } : u));
-      }
-      else
-        throw new Error(data.message)
-    }catch (err) {
-    console.error("POST /api/v1/faculty error:", err);
-    alert(err.message)
-  }
+      else throw new Error(data.message);
+    } catch(err) {
+      alert(err.message);
+    }
   }
 
   async function handleAdd(e) {
@@ -100,48 +96,95 @@ export default function AdminUsers() {
       alert("Department is required for this role"); return;
     }
     setAdding(true);
-
-    try{
+    try {
       const response = await fetch(`${API_URL}/api/v1/allUsers`,{
         method:"POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body:JSON.stringify({...form})
-    })
-    const data = await response.json();
-    // console.log(data)
-    alert(data.message)
-
-    if(data.status === "Success")
-    {
-      setUsers(l => [{
-        _id:         `u${Date.now()}`,
-        name:        form.name,
-        role:        form.role,
-        department:  form.department,
-        subject_code:form.subject_code,
-        is_active:   true,
-      }, ...l]);
-      setForm(BLANK); 
-      setShowAdd(false); 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({...form})
+      });
+      const data = await response.json();
+      alert(data.message);
+      if(data.status === "Success") {
+        setUsers(l => [{
+          _id: `u${Date.now()}`,
+          name: form.name,
+          role: form.role,
+          department: form.department,
+          subject_code: form.subject_code,
+          is_active: true,
+        }, ...l]);
+        setForm(BLANK);
+        setShowAdd(false);
+      }
+    } catch(err) {
+      alert(err.message);
     }
     setAdding(false);
-    }catch(err){
-      alert(err.message)
-    }
   }
 
-  const visible = users
+  // Filtered users for role view
+  const filteredByRole = users
     .filter(u => roleFilter === "all" || u.role === roleFilter)
     .filter(u =>
       u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.department.toLowerCase().includes(search.toLowerCase()) ||
+      (u.department || "").toLowerCase().includes(search.toLowerCase()) ||
       u.role.toLowerCase().includes(search.toLowerCase())
     );
 
-  const needsDept    = ["faculty","bos","coordinator"].includes(form.role);
-  // const needsSubject = form.role === "faculty";
+  // Grouped users for dept view
+  const allDepts = [...new Set(users.map(u => u.department || "—"))].sort();
+  const deptGroups = allDepts.map(dept => ({
+    dept,
+    users: users
+      .filter(u => (u.department || "—") === dept)
+      .filter(u =>
+        u.name.toLowerCase().includes(search.toLowerCase()) ||
+        u.role.toLowerCase().includes(search.toLowerCase())
+      )
+  })).filter(g => g.users.length > 0);
+
+  const needsDept = ["faculty","bos","coordinator"].includes(form.role);
+
+  // Shared user row component
+  const UserRow = ({ u }) => {
+    const meta = ROLE_META[u.role] || ROLE_META.faculty;
+    return (
+      <div className="flex flex-col md:grid md:grid-cols-[2fr_100px_120px_100px_110px]
+                      gap-2 md:gap-4 items-start md:items-center px-6 py-4
+                      hover:bg-slate-50 transition-colors">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                          text-xs font-extrabold text-white"
+               style={{ background: u.is_active ? "linear-gradient(135deg,#dc2626,#7f1d1d)" : "#94a3b8" }}>
+            {u.name.split(" ").map(n => n[0]).slice(0,2).join("")}
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800 text-sm">{u.name}</p>
+            {u.subject_code && <p className="text-xs text-slate-400 font-mono">{u.subject_code}</p>}
+          </div>
+        </div>
+        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full capitalize w-fit"
+              style={{ background:meta.bg, color:meta.color }}>
+          {u.role === "autonomous_coordinator" ? "coordinator" : u.role}
+        </span>
+        <span className="text-sm text-slate-600">{u.department || "—"}</span>
+        <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full w-fit
+          ${u.is_active ? "bg-green-50 text-green-600 border border-green-100" : "bg-slate-100 text-slate-400 border border-slate-200"}`}>
+          {u.is_active ? <><CheckCircle size={10} />Active</> : <><AlertCircle size={10} />Inactive</>}
+        </span>
+        <div className="flex gap-2">
+          <button onClick={() => handleToggle(u._id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer
+                    ${u.is_active
+                      ? "bg-red-50 text-red-500 border border-red-100 hover:bg-red-100"
+                      : "bg-green-50 text-green-600 border border-green-100 hover:bg-green-100"}`}>
+            {u.is_active ? "Deactivate" : "Activate"}
+          </button>
+        </div>
+      </div>
+    );
+  };
+  const [selectedDept, setSelectedDept] = useState(null);
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fb]"
@@ -200,99 +243,173 @@ export default function AdminUsers() {
         </header>
 
         <main className="flex-1 p-5 md:p-8">
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-1">
-              <Users size={16} className="text-rose-500" />
-              <span className="text-xs font-bold text-rose-500 uppercase tracking-widest">System Users</span>
-            </div>
-            <h2 className="text-2xl font-extrabold text-slate-800">All Users</h2>
-            <p className="text-slate-400 text-sm mt-0.5">Add, activate or deactivate users across all roles</p>
-          </div>
-
-          {/* Role filter tabs */}
-          <div className="flex flex-wrap gap-2 mb-5">
-            {["all", ...ROLES].map(r => (
-              <button key={r} onClick={() => setRoleFilter(r)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border capitalize
-                        ${roleFilter===r ? "bg-[#0f2744] text-white border-[#0f2744] shadow" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
-                {r === "all" ? `All (${users.length})` : `${r} (${users.filter(u=>u.role===r).length})`}
-              </button>
-            ))}
-            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3.5 py-2 ml-auto">
-              <Search size={13} className="text-slate-400" />
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                     placeholder="Search users…"
-                     className="text-sm text-slate-700 outline-none bg-transparent w-36 placeholder:text-slate-300" />
-            </div>
-          </div>
-
-          {/* Users table */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="hidden md:grid md:grid-cols-[2fr_100px_120px_100px_110px]
-                            gap-4 px-6 py-3 bg-slate-50 border-b border-slate-100
-                            text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              <span>Name</span><span>Role</span><span>Department</span><span>Status</span><span>Actions</span>
-            </div>
-
-            {visible.length === 0 ? (
-              <div className="py-14 text-center text-slate-400">
-                <Users size={38} className="mx-auto mb-3 opacity-20" />
-                <p className="font-semibold text-sm">No users found</p>
+          <div className="mb-6 flex items-end justify-between flex-wrap gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Users size={16} className="text-rose-500" />
+                <span className="text-xs font-bold text-rose-500 uppercase tracking-widest">System Users</span>
               </div>
-            ) : (
-              <div className="divide-y divide-slate-50">
-                {visible.map(u => {
-                  const meta = ROLE_META[u.role] || ROLE_META.faculty;
-                  console.log(u.role)
+              <h2 className="text-2xl font-extrabold text-slate-800">All Users</h2>
+              <p className="text-slate-400 text-sm mt-0.5">Add, activate or deactivate users across all roles</p>
+            </div>
+
+            {/* VIEW MODE TOGGLE */}
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+              <button
+                onClick={() => { setViewMode("role"); setRoleFilter("all"); }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer
+                  ${viewMode === "role"
+                    ? "bg-[#0f2744] text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
+                <LayoutList size={13} />
+                Role View
+              </button>
+              <button
+                onClick={() => { setViewMode("department"); setRoleFilter("all"); }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer
+                  ${viewMode === "department"
+                    ? "bg-[#0f2744] text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
+                <Layers size={13} />
+                Dept View
+              </button>
+            </div>
+          </div>
+
+          {/* ── ROLE VIEW ── */}
+          {viewMode === "role" && (
+            <>
+              {/* Role filter tabs */}
+              <div className="flex flex-wrap gap-2 mb-5">
+                {["all", ...ROLES].map(r => (
+                  <button key={r} onClick={() => setRoleFilter(r)}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border capitalize
+                            ${roleFilter===r ? "bg-[#0f2744] text-white border-[#0f2744] shadow" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
+                    {r === "all" ? `All (${users.length})` : `${r} (${users.filter(u=>u.role===r).length})`}
+                  </button>
+                ))}
+                <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3.5 py-2 ml-auto">
+                  <Search size={13} className="text-slate-400" />
+                  <input value={search} onChange={e => setSearch(e.target.value)}
+                         placeholder="Search users…"
+                         className="text-sm text-slate-700 outline-none bg-transparent w-36 placeholder:text-slate-300" />
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="hidden md:grid md:grid-cols-[2fr_100px_120px_100px_110px]
+                                gap-4 px-6 py-3 bg-slate-50 border-b border-slate-100
+                                text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <span>Name</span><span>Role</span><span>Department</span><span>Status</span><span>Actions</span>
+                </div>
+                {filteredByRole.length === 0 ? (
+                  <div className="py-14 text-center text-slate-400">
+                    <Users size={38} className="mx-auto mb-3 opacity-20" />
+                    <p className="font-semibold text-sm">No users found</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-50">
+                    {filteredByRole.map(u => <UserRow key={u._id} u={u} />)}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── DEPARTMENT VIEW ── */}
+          {viewMode === "department" && (
+  <>
+    {/* SEARCH */}
+    <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
+        <Search size={14} className="text-slate-400" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search users..."
+          className="text-sm outline-none bg-transparent"
+        />
+      </div>
+
+      {selectedDept && (
+        <button
+          onClick={() => setSelectedDept(null)}
+          className="text-sm font-semibold text-indigo-600 hover:underline"
+        >
+          ← Back
+        </button>
+      )}
+    </div>
+
+    {/* 🔥 STEP A — DEPT CARDS */}
+    {!selectedDept && (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {deptGroups.map(({ dept, users: dUsers }) => {
+          const m = DEPT_META[dept] || DEPT_META["—"];
+
+          return (
+            <div
+              key={dept}
+              onClick={() => setSelectedDept(dept)}
+              className="cursor-pointer bg-white rounded-2xl border border-slate-200 p-6 
+                         shadow-sm hover:shadow-md hover:-translate-y-1 transition-all"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold"
+                  style={{
+                    background: `linear-gradient(135deg, ${m.accent}, ${m.color})`,
+                  }}
+                >
+                  {dept.slice(0, 2)}
+                </div>
+
+                <span className="text-xs font-bold text-slate-400">
+                  {dUsers.length} users
+                </span>
+              </div>
+
+              <h3 className="text-lg font-bold text-slate-800 mb-2">{dept}</h3>
+
+              {/* role breakdown */}
+              <div className="flex flex-wrap gap-2">
+                {[...new Set(dUsers.map((u) => u.role))].map((r) => {
+                  const rm = ROLE_META[r] || ROLE_META.faculty;
                   return (
-                    <div key={u._id}
-                         className="flex flex-col md:grid md:grid-cols-[2fr_100px_120px_100px_110px]
-                                    gap-2 md:gap-4 items-start md:items-center px-6 py-4
-                                    hover:bg-slate-50 transition-colors">
-                      {/* Name */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
-                                        text-xs font-extrabold text-white"
-                             style={{ background: u.is_active ? "linear-gradient(135deg,#dc2626,#7f1d1d)" : "#94a3b8" }}>
-                          {u.name.split(" ").map(n => n[0]).slice(0,2).join("")}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-800 text-sm">{u.name}</p>
-                          {u.subject_code && <p className="text-xs text-slate-400 font-mono">{u.subject_code}</p>}
-                        </div>
-                      </div>
-
-                      {/* Role */}
-                      <span className="text-[11px] font-bold px-2.5 py-1 rounded-full capitalize w-fit"
-                            style={{ background:meta.bg, color:meta.color }}>
-                        {u.role == "autonomous_coordinator"?"coordinator":u.role}
-                      </span>
-
-                      {/* Dept */}
-                      <span className="text-sm text-slate-600">{u.department || "—"}</span>
-
-                      {/* Status */}
-                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full w-fit
-                        ${u.is_active ? "bg-green-50 text-green-600 border border-green-100" : "bg-slate-100 text-slate-400 border border-slate-200"}`}>
-                        {u.is_active ? <><CheckCircle size={10} />Active</> : <><AlertCircle size={10} />Inactive</>}
-                      </span>
-
-                      {/* Actions */}
-                      <div className="flex gap-2">
-                        <button onClick={() => handleToggle(u._id)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer
-                                  ${u.is_active
-                                    ? "bg-red-50 text-red-500 border border-red-100 hover:bg-red-100"
-                                    : "bg-green-50 text-green-600 border border-green-100 hover:bg-green-100"}`}>
-                          {u.is_active ? "Deactivate" : "Activate"}
-                        </button>
-                      </div>
-                    </div>
+                    <span
+                      key={r}
+                      className="text-[11px] font-bold px-2 py-1 rounded-full"
+                      style={{ background: rm.bg, color: rm.color }}
+                    >
+                      {r} ({dUsers.filter((u) => u.role === r).length})
+                    </span>
                   );
                 })}
               </div>
-            )}
-          </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+
+    {/* 🔥 STEP B — USERS INSIDE SELECTED DEPT */}
+    {selectedDept && (
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b font-bold text-slate-700">
+          {selectedDept} Department Users
+        </div>
+
+        <div className="divide-y">
+          {users
+            .filter((u) => (u.department || "—") === selectedDept)
+            .map((u) => (
+              <UserRow key={u._id} u={u} />
+            ))}
+        </div>
+      </div>
+    )}
+  </>
+)}
         </main>
       </div>
 
@@ -315,16 +432,12 @@ export default function AdminUsers() {
             </div>
 
             <form onSubmit={handleAdd} className="px-6 py-5 flex flex-col gap-4">
-
-              {/* Name */}
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Full Name *</label>
                 <input value={form.name} onChange={e => setF("name")(e.target.value)}
                        placeholder="e.g. Dr. Anand Verma"
                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-50 transition-all placeholder:text-slate-300" />
               </div>
-
-              {/* Role + Dept side by side */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Role *</label>
@@ -344,25 +457,12 @@ export default function AdminUsers() {
                   </div>
                 )}
               </div>
-
-              {/* Subject code — only for faculty */}
-              {/* {needsSubject && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Subject Code</label>
-                  <input value={form.subject_code} onChange={e => setF("subject_code")(e.target.value.toUpperCase())}
-                         placeholder="e.g. CS601"
-                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-mono text-slate-800 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-50 transition-all placeholder:text-slate-300" />
-                </div>
-              )} */}
-
-              {/* Password */}
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Password *</label>
                 <input type="password" value={form.password} onChange={e => setF("password")(e.target.value)}
                        placeholder="Set a login password"
                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-50 transition-all placeholder:text-slate-300" />
               </div>
-
               <div className="flex gap-2 mt-1">
                 <button type="button" onClick={() => setShowAdd(false)}
                         className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-500 hover:bg-slate-50 cursor-pointer">Cancel</button>

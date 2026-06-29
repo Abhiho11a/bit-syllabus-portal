@@ -58,46 +58,60 @@ export default function BosAssignments() {
   // Re-fetch whenever view changes
   useEffect(() => { fetchAssignments(view); }, [view]);
 
-  async function fetchAssignments(currentView = view) {
-    setLoading(true);
-    setError("");
-    setActiveTab("all"); // reset tab on view switch
-    try {
-      // "mine"  → filter by assigned_by (this BOS's _id)
-      // "dept"  → filter by department (all BOS in dept combined)
-      const query = currentView === "mine"
-        ? `assigned_by=${user?.id}`
-        : `department=${user?.department}`;
-
-      const res  = await fetch(`${API_URL}/api/v1/assignments?${query}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Failed to fetch");
-      setData(json.assignments || []);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load assignments.");
-    } finally {
-      setLoading(false);
+  // ── FETCH — add faculty_id query for faculty role ─────────────────────────
+async function fetchAssignments(currentView = view) {
+  setLoading(true);
+  setError("");
+  setActiveTab("all");
+  try {
+    // Build query based on role and view
+    let query;
+    if (user?.role === "faculty") {
+      query = `faculty_id=${user?.id}`;           // faculty sees own tasks
+    } else if (currentView === "mine") {
+      query = `assigned_by=${user?.id}`;          // BOS sees what they assigned
+    } else {
+      query = `department=${user?.department}`;   // dept view
     }
-  }
 
-  async function handleDelete(id) {
-    if (!confirm("Delete this assignment? The faculty will lose this pending task.")) return;
-    setDeletingId(id);
-    try {
-      const res  = await fetch(`${API_URL}/api/v1/assignments/${id}`, {
-        method: "DELETE",
-      });
-      const json = await res.json();
-      if (!res.ok) { alert(json.message || "Failed to delete"); return; }
-      setData(d => d.filter(a => a._id !== id));
-    } catch (err) {
-      console.error(err);
-      alert("Server error. Try again.");
-    } finally {
-      setDeletingId(null);
+    const res  = await fetch(`${API_URL}/api/v1/assignments?${query}`);
+
+    // ← Guard: if response is not JSON (e.g. HTML 404 page), handle gracefully
+    const contentType = res.headers.get("content-type");
+    if (!contentType?.includes("application/json")) {
+      throw new Error(`Server returned non-JSON response (${res.status})`);
     }
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message || "Failed to fetch");
+    setData(json.assignments || []);
+  } catch (err) {
+    console.error(err);
+    setError("Failed to load assignments.");
+  } finally {
+    setLoading(false);
   }
+}
+
+// ── DELETE handler ────────────────────────────────────────────────────────
+async function handleDelete(id) {
+  // setIsDeleting(true);
+  try {
+    const res  = await fetch(`${API_URL}/api/v1/assignments/${id}`, {
+      method: "DELETE",
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message || "Delete failed");
+
+    // Remove from UI immediately
+    setData(prev => prev.filter(a => a._id !== id));
+  } catch (err) {
+    console.error(err);
+    alert("Delete failed: " + err.message);
+  } finally {
+    // setIsDeleting(false);
+  }
+}
 
   function handleLogout() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
@@ -118,9 +132,12 @@ export default function BosAssignments() {
     });
 
   // In dept view, BOS can only delete assignments THEY created
+  // const canDelete = (a) =>
+  //   a.status === "pending" &&
+  //   (view === "mine" || a.assigned_by?._id === user?._id || a.assigned_by === user?._id);
+
   const canDelete = (a) =>
-    a.status === "pending" &&
-    (view === "mine" || a.assigned_by?._id === user?._id || a.assigned_by === user?._id);
+  (view === "mine" || a.assigned_by?._id === user?._id || a.assigned_by === user?._id);
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fb]"
@@ -412,13 +429,25 @@ export default function BosAssignments() {
 
                         {canDelete(a) && (
                           <button
-                            onClick={() => handleDelete(a._id)}
+                            onClick={() => {
+                              const isApproved = a.status === "approved";
+
+                              const message = isApproved
+                                ? `⚠️ This syllabus has been APPROVED.\nAre you sure you want to withdraw and delete "${a.title || "this assignment"}"?\nThis action cannot be undone.`
+                                : `Are you sure you want to withdraw and delete "${a.title || "this assignment"}"?\nThis action cannot be undone.`;
+
+                              const confirmed = window.confirm(message);
+                              if (confirmed) handleDelete(a._id);
+                            }}
                             disabled={isDeleting}
-                            title="Delete assignment"
-                            className="w-8 h-8 rounded-lg bg-red-50 border border-red-100
-                                       flex items-center justify-center text-red-400
-                                       hover:bg-red-100 transition-colors cursor-pointer
-                                       disabled:opacity-50 disabled:cursor-not-allowed">
+                            title={a.status === "approved" ? "Withdraw approved syllabus" : "Withdraw assignment"}
+                            className={`w-8 h-8 rounded-lg border flex items-center justify-center
+                                        transition-colors cursor-pointer
+                                        disabled:opacity-50 disabled:cursor-not-allowed
+                                        ${a.status === "approved"
+                                          ? "bg-orange-50 border-orange-200 text-orange-400 hover:bg-orange-100"
+                                          : "bg-red-50 border-red-100 text-red-400 hover:bg-red-100"
+                                        }`}>
                             {isDeleting
                               ? <span className="w-3 h-3 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
                               : <Trash2 size={13} />

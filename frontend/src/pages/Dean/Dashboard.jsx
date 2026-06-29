@@ -5,7 +5,8 @@ import {
   LayoutDashboard, FileText, Users, BookOpen,
   LogOut, User, Menu, X, Shield,
   CheckCircle, Clock, XCircle, ArrowRight,
-  TrendingUp, RefreshCw, GraduationCap
+  TrendingUp, RefreshCw, GraduationCap,
+  GitMerge
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;

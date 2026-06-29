@@ -1,11 +1,11 @@
-// pages/faculty/Pending.jsx
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Clock, BookOpen, ArrowRight, CheckCircle,
   Search, Calendar, GraduationCap, LayoutDashboard,
   FileText, LogOut, User, Menu, X, RefreshCw,
-  RotateCcw, Eye, AlertCircle, Loader2
+  RotateCcw, Eye, AlertCircle, Loader2, X as XIcon,
+  Download, RefreshCw as RefreshIcon
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -20,7 +20,16 @@ function daysSince(d) {
   return Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
 }
 
-function UrgencyBadge({ days }) {
+function UrgencyBadge({ days, status }) {
+  // Don't show urgency for submitted assignments
+  if (status === "submitted") {
+    return (
+      <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-green-50 text-green-600 border border-green-100">
+        Submitted
+      </span>
+    );
+  }
+
   if (days > 14) return (
     <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-red-500 border border-red-100">
       Overdue · {days}d
@@ -38,6 +47,68 @@ function UrgencyBadge({ days }) {
   );
 }
 
+// ── PDF Viewer Modal ──────────────────────────────────────────
+function PDFViewerModal({ isOpen, pdfUrl, onClose, taskName }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col
+                      shadow-2xl animate-fadeIn">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
+          <div>
+            <h2 className="font-bold text-slate-800">View Syllabus</h2>
+            <p className="text-xs text-slate-400 mt-1">{taskName}</p>
+          </div>
+          <button onClick={onClose}
+                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
+            <XIcon size={20} className="text-slate-500" />
+          </button>
+        </div>
+
+        {/* PDF Viewer */}
+        <div className="flex-1 overflow-auto bg-slate-50">
+          {pdfUrl ? (
+            <iframe
+              src={pdfUrl}
+              title="Syllabus PDF"
+              className="w-full h-full"
+              style={{ minHeight: "500px" }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-96">
+              <div className="text-center">
+                <AlertCircle size={32} className="text-slate-300 mx-auto mb-2" />
+                <p className="text-slate-400">PDF not available</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-200 bg-white flex-shrink-0 flex items-center justify-between">
+          <p className="text-xs text-slate-400">
+            {pdfUrl ? (
+              <>
+                💡 <span>You can download the PDF using your browser's download button</span>
+              </>
+            ) : (
+              <span>Unable to load PDF</span>
+            )}
+          </p>
+          <button onClick={onClose}
+                  className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg
+                             hover:bg-slate-800 transition-colors cursor-pointer">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FacultyPending() {
   const navigate = useNavigate();
   const user     = JSON.parse(localStorage.getItem("user"));
@@ -47,17 +118,24 @@ export default function FacultyPending() {
   const [semFilter,   setSemFilter]   = useState("all");
   const [tasks,       setTasks]       = useState([]);
   const [loading,     setLoading]     = useState(true);
-  const [submitting,  setSubmitting]  = useState(false); // true while saving after return
-  const [justSubmitted, setJustSubmitted] = useState(null); // _id of task just submitted
+  const [submitting,  setSubmitting]  = useState(false);
+  const [justSubmitted, setJustSubmitted] = useState(null);
 
-  // ── Fetch all pending assignments ──────────────────────────────
+  // PDF Viewer state
+  const [pdfModal, setPdfModal] = useState({ isOpen: false, url: "", taskName: "" });
+
+  // ── Fetch all pending assignments (exclude approved) ─────────
   function fetchAssignments() {
     setLoading(true);
-    fetch(`${API_URL}/api/v1/assignments?faculty_id=${user?.id}&status=pending`)
+    fetch(`${API_URL}/api/v1/assignments?faculty_id=${user?.id}&status=pending,submitted`)
       .then(r => r.json())
       .then(data => {
-        console.log(data)
-        setTasks(data.assignments || []);
+        console.log(data);
+        // Filter out approved assignments
+        const filteredTasks = (data.assignments || []).filter(
+          task => task.status !== "approved"
+        );
+        setTasks(filteredTasks);
         setLoading(false);
       })
       .catch(err => {
@@ -76,10 +154,8 @@ export default function FacultyPending() {
       // Clean URL immediately
       window.history.replaceState({}, "", window.location.pathname);
       submitAssignment(assignmentId, pdfUrl);
-    } 
-    // else {
-      fetchAssignments();
-    // }
+    }
+    fetchAssignments();
   }, []);
 
   // ── Save submission to backend ─────────────────────────────────
@@ -94,9 +170,7 @@ export default function FacultyPending() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
-      // Mark this card as "just submitted" so we can show success state
       setJustSubmitted(assignmentId);
-      // Refresh list after 2s so user sees the success state first
       setTimeout(() => {
         setJustSubmitted(null);
         fetchAssignments();
@@ -109,7 +183,7 @@ export default function FacultyPending() {
     }
   }
 
-  // ── Open syllabus form ─────────────────────────────────────────
+  // ── Open syllabus form for pending assignments ──────────────────
   function openSyllabusForm(assignment) {
     const params = new URLSearchParams({
       assignmentId: assignment._id,
@@ -121,6 +195,29 @@ export default function FacultyPending() {
       callbackUrl:  window.location.origin + "/faculty/pending",
     });
     window.location.href = `https://syllabus-gen-integrated.netlify.app/?${params.toString()}`;
+  }
+
+  // ── Refill syllabus (for submitted assignments) ───────────────
+  function refillSyllabusForm(assignment) {
+    const params = new URLSearchParams({
+      assignmentId: assignment._id,
+      subjectCode:  assignment.subject_code,
+      subjectName:  assignment.subject_name,
+      sem:          String(assignment.sem),
+      faculty:      assignment.faculty_id?.name || user?.name || "",
+      department:   assignment.department || user?.department || "",
+      callbackUrl:  window.location.origin + "/faculty/pending",
+    });
+    window.location.href = `https://syllabus-gen-integrated.netlify.app/?${params.toString()}`;
+  }
+
+  // ── View submitted PDF ─────────────────────────────────────────
+  function viewPDF(pdfUrl, taskName) {
+    setPdfModal({ isOpen: true, url: pdfUrl, taskName });
+  }
+
+  function closePDFModal() {
+    setPdfModal({ isOpen: false, url: "", taskName: "" });
   }
 
   function handleLogout() {
@@ -170,9 +267,9 @@ export default function FacultyPending() {
                                  ${active ? "bg-white/15 text-white" : "text-blue-200 hover:bg-white/8 hover:text-white"}`}>
                 <Icon size={16} strokeWidth={2} />
                 <span className="flex-1">{label}</span>
-                {label === "Pending Tasks" && tasks.length > 0 && (
+                {label === "Pending Tasks" && tasks.filter(t => t.status === "pending").length > 0 && (
                   <span className="text-[10px] font-bold bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-full">
-                    {tasks.length}
+                    {tasks.filter(t => t.status === "pending").length}
                   </span>
                 )}
               </button>
@@ -220,13 +317,15 @@ export default function FacultyPending() {
           </button>
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
             <Clock size={13} className="text-amber-500" />
-            <span className="text-xs font-bold text-amber-600">{tasks.length} Pending</span>
+            <span className="text-xs font-bold text-amber-600">
+              {tasks.filter(t => t.status === "pending").length} Pending
+            </span>
           </div>
         </header>
 
         <main className="flex-1 p-5 md:p-8">
 
-          {/* Submitting banner — shows while saving after returning from form */}
+          {/* Submitting banner */}
           {submitting && (
             <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 mb-6
                             flex items-center gap-3" style={{ animation:"fadeIn .2s ease" }}>
@@ -303,6 +402,8 @@ export default function FacultyPending() {
               {filtered.map(task => {
                 const days            = daysSince(task.createdAt);
                 const isJustSubmitted = justSubmitted === task._id;
+                const isPending       = task.status === "pending";
+                const isSubmitted     = task.status === "submitted";
 
                 // ── Card: just submitted state ──────────────────
                 if (isJustSubmitted) {
@@ -332,25 +433,29 @@ export default function FacultyPending() {
                   );
                 }
 
-                // ── Card: normal pending state ──────────────────
+                // ── Card: normal state (pending or submitted) ────
                 return (
                   <div key={task._id}
                        className="bg-white rounded-2xl border border-slate-100 shadow-sm
                                   overflow-hidden hover:shadow-md hover:-translate-y-1 transition-all duration-200">
                     <div className="h-1.5" style={{
-                      background: days > 14
-                        ? "linear-gradient(90deg,#f87171,#ef4444)"
-                        : days > 7
-                        ? "linear-gradient(90deg,#fbbf24,#f59e0b)"
-                        : "linear-gradient(90deg,#60a5fa,#3b82f6)"
+                      background: isPending
+                        ? (days > 14
+                          ? "linear-gradient(90deg,#f87171,#ef4444)"
+                          : days > 7
+                          ? "linear-gradient(90deg,#fbbf24,#f59e0b)"
+                          : "linear-gradient(90deg,#60a5fa,#3b82f6)")
+                        : "linear-gradient(90deg,#34d399,#10b981)"
                     }} />
 
                     <div className="p-5">
                       <div className="flex items-start justify-between gap-3 mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100
-                                          flex items-center justify-center flex-shrink-0">
-                            <BookOpen size={18} className="text-blue-600" />
+                          <div className={`w-11 h-11 rounded-xl border flex items-center justify-center flex-shrink-0
+                                          ${isSubmitted 
+                                            ? "bg-green-50 border-green-100" 
+                                            : "bg-blue-50 border-blue-100"}`}>
+                            <BookOpen size={18} className={isSubmitted ? "text-green-600" : "text-blue-600"} />
                           </div>
                           <div>
                             <h3 className="font-bold text-slate-800 text-sm leading-snug">
@@ -361,7 +466,7 @@ export default function FacultyPending() {
                             </span>
                           </div>
                         </div>
-                        <UrgencyBadge days={days} />
+                        <UrgencyBadge days={days} status={task.status} />
                       </div>
 
                       <div className="flex gap-4 mb-3">
@@ -385,12 +490,34 @@ export default function FacultyPending() {
                         </span>
                       </p>
 
-                      <button onClick={() => openSyllabusForm(task)}
-                              className="w-full flex items-center justify-center gap-2
-                                         bg-[#0f2744] text-white text-sm font-bold py-2.5 rounded-xl
-                                         hover:bg-[#1e3a5f] transition-all hover:-translate-y-0.5 cursor-pointer">
-                        Fill Syllabus <ArrowRight size={14} />
-                      </button>
+                      {/* PENDING STATUS: Show "Fill Syllabus" button */}
+                      {isPending && (
+                        <button onClick={() => openSyllabusForm(task)}
+                                className="w-full flex items-center justify-center gap-2
+                                           bg-[#0f2744] text-white text-sm font-bold py-2.5 rounded-xl
+                                           hover:bg-[#1e3a5f] transition-all hover:-translate-y-0.5 cursor-pointer">
+                          Fill Syllabus <ArrowRight size={14} />
+                        </button>
+                      )}
+
+                      {/* SUBMITTED STATUS: Show "Refill Syllabus" and "View PDF" buttons */}
+                      {isSubmitted && (
+                        <div className="flex gap-2">
+                          <button onClick={() => refillSyllabusForm(task)}
+                                  className="flex-1 flex items-center justify-center gap-2
+                                             bg-[#0f2744] text-white text-sm font-bold py-2.5 rounded-xl
+                                             hover:bg-[#1e3a5f] transition-all hover:-translate-y-0.5 cursor-pointer">
+                            <RefreshIcon size={14} /> Refill
+                          </button>
+                          <button onClick={() => viewPDF(task.pdf_url, task.subject_name)}
+                                  className="flex-shrink-0 flex items-center justify-center gap-2
+                                             bg-slate-100 text-slate-700 px-3.5 py-2.5 rounded-xl
+                                             hover:bg-slate-200 transition-all cursor-pointer"
+                                  title="View PDF">
+                            <Eye size={14} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -399,6 +526,14 @@ export default function FacultyPending() {
           )}
         </main>
       </div>
+
+      {/* PDF Viewer Modal */}
+      <PDFViewerModal 
+        isOpen={pdfModal.isOpen}
+        pdfUrl={pdfModal.url}
+        onClose={closePDFModal}
+        taskName={pdfModal.taskName}
+      />
 
       <style>{`
         @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }

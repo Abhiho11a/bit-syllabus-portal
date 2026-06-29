@@ -5,6 +5,7 @@ dotenv.config()
 import cors from "cors"
 import User from "./models/userModel.js"
 import Assignment from "./models/assignmentModel.js"
+import Activity from "./models/activityModel.js"
 import bcrypt from "bcryptjs"
 import mongoose from "mongoose"
 
@@ -578,6 +579,47 @@ app.post("/api/v1/allusers", async (req, res) => {
       status:  "Fail",
       message: "Server error.",
     });
+  }
+});
+
+// ── STATS ROUTES ────────────────────────────────────────────────
+app.post("/api/v1/stats/log", async (req, res) => {
+  try {
+    const { user_id, user_name, role, action, details } = req.body;
+    const activity = await Activity.create({ user_id, user_name, role, action, details });
+    return res.status(201).json({ status: "Success", activity });
+  } catch (err) {
+    console.error("[stats/log error]", err);
+    return res.status(500).json({ message: "Server error." });
+  }
+});
+
+app.get("/api/v1/stats", async (req, res) => {
+  try {
+    const totalVisits = await Activity.countDocuments({ action: "PAGE_VIEW" });
+    const totalApprovals = await Activity.countDocuments({ action: "MANUAL_APPROVE" });
+    
+    const roleBreakdown = await Activity.aggregate([
+      { $match: { action: "MANUAL_APPROVE" } },
+      { $group: { _id: "$role", count: { $sum: 1 } } }
+    ]);
+    
+    const recentActivity = await Activity.find()
+      .sort({ createdAt: -1 })
+      .limit(20);
+      
+    return res.status(200).json({
+      status: "Success",
+      stats: {
+        totalVisits,
+        totalApprovals,
+        roleBreakdown,
+        recentActivity
+      }
+    });
+  } catch (err) {
+    console.error("[stats error]", err);
+    return res.status(500).json({ message: "Server error." });
   }
 });
 

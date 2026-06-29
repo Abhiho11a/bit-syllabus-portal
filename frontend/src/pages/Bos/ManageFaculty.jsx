@@ -125,6 +125,29 @@ export default function BosFaculty() {
     }
   }
 
+  // Delete Faculty
+  async function handleDeleteFaculty(id, name) {
+  const confirmed = window.confirm(
+    `⚠️ Permanently Delete Faculty\nAre you sure you want to permanently delete "${name}"?\nThis will remove them from the database and cannot be undone.`
+  );
+  if (!confirmed) return;
+
+  try {
+    const res  = await fetch(`${API_URL}/api/v1/faculty/${id}`, {
+      method: "DELETE",
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message || "Delete failed");
+
+    // Remove from UI immediately
+    setFaculty(prev => prev.filter(f => f._id !== id));
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to delete: " + err.message);
+  }
+}
+
   const visible = faculty.filter(f =>
     f.name?.toLowerCase().includes(search.toLowerCase())
   );
@@ -250,78 +273,81 @@ export default function BosFaculty() {
                    className="flex-1 text-sm text-slate-700 outline-none bg-transparent placeholder:text-slate-300" />
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Faculty cards */}
-          {visible.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center shadow-sm">
-              <Users size={40} className="mx-auto text-slate-200 mb-3" />
-              <p className="font-bold text-slate-700">No faculty found</p>
-              <button onClick={() => setShowAdd(true)}
-                      className="mt-4 flex items-center gap-2 mx-auto bg-[#0f2744] text-white
-                                 text-sm font-bold px-5 py-2.5 rounded-xl cursor-pointer
-                                 hover:bg-[#1e3a5f] transition-all">
-                <UserPlus size={14} /> Add Faculty
-              </button>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 gap-4">
-              {visible.map(f => (
-                <div key={f.id}
-                     className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5
-                                hover:shadow-md transition-all duration-200">
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-3">
-                      {/* Avatar */}
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center
-                                      flex-shrink-0 text-base font-extrabold text-white"
-                           style={{ background: f.is_active
-                             ? "linear-gradient(135deg,#6d28d9,#4f46e5)"
-                             : "#94a3b8" }}>
-                        {f.name.split(" ").map(n => n[0]).slice(0,2).join("")}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-slate-800 text-sm">{f.name}</h3>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          Added {f.createdAt ? new Date(f.createdAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}) : "—"}
-                        </p>
-                      </div>
-                    </div>
-                    {/* Active badge */}
-                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1
-                      ${f.is_active
-                        ? "bg-green-50 text-green-600 border border-green-100"
-                        : "bg-slate-100 text-slate-400 border border-slate-200"}`}>
-                      {f.is_active
-                        ? <><CheckCircle size={10} /> Active</>
-                        : <><AlertCircle size={10} /> Inactive</>
-                      }
-                    </span>
+          {visible.map(f => (
+            <div key={f._id}
+                className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5
+                            hover:shadow-md transition-all duration-200">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  {/* Avatar */}
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center
+                                  flex-shrink-0 text-base font-extrabold text-white"
+                      style={{ background: f.is_active
+                        ? "linear-gradient(135deg,#6d28d9,#4f46e5)"
+                        : "#94a3b8" }}>
+                    {f.name.split(" ").map(n => n[0]).slice(0,2).join("")}
                   </div>
-
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={() => handleToggleActive(f._id)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer
-                        ${f.is_active
-                          ? "bg-red-50 text-red-500 border border-red-100 hover:bg-red-100"
-                          : "bg-green-50 text-green-600 border border-green-100 hover:bg-green-100"}`}
-                    >
-                      {f.is_active ? "Deactivate" : "Reactivate"}
-                    </button>
-                    <button
-                      disabled={!f.is_active}
-                      onClick={() => navigate(`/bos/assign?faculty=${f.id}`)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold 
-                                 transition-all flex items-center justify-center gap-1.5
-                                 ${f.is_active?"cursor-pointer bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100":"bg-purple-100 text-purple-300 border border-purple-200 cursor-not-allowed"}
-                                 `}
-                    >
-                      <Plus size={12} /> Assign Task
-                    </button>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-sm">{f.name}</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Added {f.createdAt
+                        ? new Date(f.createdAt).toLocaleDateString("en-IN",{
+                            day:"numeric", month:"short", year:"numeric"
+                          })
+                        : "—"}
+                    </p>
                   </div>
                 </div>
-              ))}
+
+                {/* Active badge + Delete icon together */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full
+                                    inline-flex items-center gap-1
+                                    ${f.is_active
+                                      ? "bg-green-50 text-green-600 border border-green-100"
+                                      : "bg-slate-100 text-slate-400 border border-slate-200"}`}>
+                    {f.is_active
+                      ? <><CheckCircle size={10} /> Active</>
+                      : <><AlertCircle size={10} /> Inactive</>}
+                  </span>
+
+                  {/* ── Permanent Delete button ── */}
+                  <button
+                    onClick={() => handleDeleteFaculty(f._id, f.name)}
+                    title="Permanently delete faculty"
+                    className="w-7 h-7 rounded-lg bg-red-50 border border-red-100
+                              flex items-center justify-center text-red-400
+                              hover:bg-red-100 hover:text-red-600
+                              transition-colors cursor-pointer flex-shrink-0">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => handleToggleActive(f._id)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer
+                    ${f.is_active
+                      ? "bg-red-50 text-red-500 border border-red-100 hover:bg-red-100"
+                      : "bg-green-50 text-green-600 border border-green-100 hover:bg-green-100"}`}>
+                  {f.is_active ? "Deactivate" : "Reactivate"}
+                </button>
+                <button
+                  disabled={!f.is_active}
+                  onClick={() => navigate(`/bos/assign?faculty=${f._id}`)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold
+                            transition-all flex items-center justify-center gap-1.5
+                            ${f.is_active
+                              ? "cursor-pointer bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100"
+                              : "bg-purple-100 text-purple-300 border border-purple-200 cursor-not-allowed"}`}>
+                  <Plus size={12} /> Assign Task
+                </button>
+              </div>
             </div>
-          )}
+          ))}</div>
         </main>
       </div>
 

@@ -294,11 +294,12 @@ export default function FacultyDashboard() {
                           assignmentId: task._id,
                           subjectCode:  task.subject_code,
                           subjectName:  task.subject_name,
-                          sem:          task.sem,
-                          department:   user?.department,
-                          facultyName:  user?.name,
+                          sem:          String(task.sem),
+                          faculty:      task.faculty_id?.name || user?.name || "",
+                          department:   task.department || user?.department || "",
+                          callbackUrl:  window.location.origin + "/faculty/pending",
                         });
-                        window.open(`${import.meta.env.VITE_SYLLABUS_URL || "https://bit-syllabus-gen.netlify.app/"}?${params}`, "_blank");
+                        window.location.href = `https://syllabus-gen-integrated.netlify.app/?${params.toString()}`;
                       }}
                       className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg
                                  bg-[#0f2744] text-white hover:bg-[#1e3a5f]
