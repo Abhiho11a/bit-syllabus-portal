@@ -20,7 +20,13 @@ import AdminUsers from "./pages/Admin/Users"
 import AdminDepartments from "./pages/Admin/Departments"
 import AdminSyllabi from "./pages/Admin/Syllabi"
 import MergeFilesModal from "./components/MergeFilesModal"
+import DeanManualApprove from "./pages/Dean/ManualApprove"
+import CoordinatorManualApprove from "./pages/Coordinator/ManualApprove"
+import Stats from "./pages/Admin/Stats"
+import useActivityLogger from "./hooks/useActivityLogger"
+
 export default function App(){
+  useActivityLogger();
   return(
     <div>
 
@@ -42,10 +48,12 @@ export default function App(){
         {/*  */}
         <Route path="/coordinator/dashboard" element={<CoordinatorDashboard/>}/>
         <Route path="/coordinator/syllabi" element={<CoordinatorSyllabi/>}/>
+        <Route path="/coordinator/manual-approve" element={<CoordinatorManualApprove/>}/>
 
         {/*  */}
         <Route path="/dean/dashboard" element={<DeanDashboard/>}/>
         <Route path="/dean/syllabi" element={<DeanSyllabi/>}/>
+        <Route path="/dean/manual-approve" element={<DeanManualApprove/>}/>
         <Route path="/dean/faculty" element={<DeanFaculty/>}/>
         <Route path="/dean/manage-bos" element={<DeanManageBOS/>}/>
 
@@ -54,6 +62,7 @@ export default function App(){
         <Route path="/admin/users" element={<AdminUsers/>}/>
         <Route path="/admin/departments" element={<AdminDepartments/>}/>
         <Route path="/admin/syllabi" element={<AdminSyllabi/>}/>
+        <Route path="/stats" element={<Stats/>}/>
 
 
         <Route path="/mergefiles" element={<MergeFilesModal/>}/>

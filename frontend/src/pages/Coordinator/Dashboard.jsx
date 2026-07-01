@@ -6,7 +6,7 @@ import {
   LayoutDashboard, FileText, LogOut, User,
   Menu, X, CheckCircle, Clock, XCircle,
   ArrowRight, TrendingUp, Eye, Users, RefreshCw,
-  GitMerge
+  GitMerge, FileCheck2
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -22,6 +22,7 @@ const NAV_LINKS = [
   { label:"Dashboard", path:"/coordinator/dashboard", icon: LayoutDashboard },
   { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText         },
   { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
+  { label:"Manual Approve", path:"/coordinator/manual-approve", icon: FileCheck2 },
 ];
 
 export default function CoordinatorDashboard() {

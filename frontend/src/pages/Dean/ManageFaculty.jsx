@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, FileText, Users, GraduationCap,
   LogOut, User, Menu, X, Shield,
-  Search, CheckCircle, AlertCircle
+  Search, CheckCircle, AlertCircle, FileCheck2
 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -15,6 +15,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/dean/dashboard",  icon: LayoutDashboard },
   { label:"Syllabi",     path:"/dean/syllabi",     icon: FileText        },
+  { label:"Manual Approve", path:"/dean/manual-approve", icon: FileCheck2 },
   { label:"Manage BOS",  path:"/dean/manage-bos",  icon: Users           },
   { label:"Faculty",     path:"/dean/faculty",     icon: GraduationCap   },
 ];

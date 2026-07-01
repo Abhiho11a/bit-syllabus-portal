@@ -5,7 +5,7 @@ import {
   Menu, X, Users, Search, Eye,
   CheckCircle, XCircle, Clock, RefreshCw,
   Send, AlertCircle,
-  GitMerge
+  GitMerge, FileCheck2
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -27,6 +27,7 @@ const NAV_LINKS = [
   { label:"Dashboard", path:"/coordinator/dashboard", icon: LayoutDashboard },
   { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText         },
   { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
+  { label:"Manual Approve", path:"/coordinator/manual-approve", icon: FileCheck2 },
 ];
 
 export default function CoordinatorSyllabi() {

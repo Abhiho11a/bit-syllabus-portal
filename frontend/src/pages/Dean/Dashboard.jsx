@@ -6,7 +6,7 @@ import {
   LogOut, User, Menu, X, Shield,
   CheckCircle, Clock, XCircle, ArrowRight,
   TrendingUp, RefreshCw, GraduationCap,
-  GitMerge
+  GitMerge, FileCheck2
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -14,6 +14,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 const NAV_LINKS = [
   { label:"Dashboard",  path:"/dean/dashboard", icon: LayoutDashboard },
   { label:"Syllabi",    path:"/dean/syllabi",    icon: FileText        },
+  { label:"Manual Approve", path:"/dean/manual-approve", icon: FileCheck2 },
   { label:"Manage BOS", path:"/dean/manage-bos", icon: Users           },
   { label:"Faculty",    path:"/dean/faculty",    icon: GraduationCap   },
 ];
