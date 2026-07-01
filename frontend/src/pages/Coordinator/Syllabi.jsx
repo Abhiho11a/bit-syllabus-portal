@@ -5,7 +5,7 @@ import {
   Menu, X, Users, Search, Eye,
   CheckCircle, XCircle, Clock, RefreshCw,
   Send, AlertCircle,
-  GitMerge, FileCheck2
+  GitMerge, FileCheck2, ArrowLeft, Folder
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -40,6 +40,7 @@ export default function CoordinatorSyllabi() {
   const [syllabi, setSyllabi]         = useState([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState("");
+  const [selectedSemester, setSelectedSemester] = useState(null);
 
   // ── Reject modal state ───────────────────────────────────────
   const [rejectModal, setRejectModal] = useState(null); // holds the syllabus being rejected
@@ -298,132 +299,119 @@ export default function CoordinatorSyllabi() {
             </div>
           )}
 
-          {/* Cards */}
-          {!loading && !error && visible.length > 0 && (
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {visible.map(s => {
-                const meta    = STATUS_META[s.status] || STATUS_META.submitted;
-                const Icon    = meta.icon;
-                const faculty = s.faculty_id;
-                const busy    = actionLoading[s._id];
-
+          {/* FOLDERS VIEW */}
+          {!loading && !error && visible.length > 0 && selectedSemester === null && (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from(new Set(visible.map(s => s.sem))).sort().map(sem => {
+                const count = visible.filter(s => s.sem === sem).length;
                 return (
-                  <div key={s._id}
-                       className="bg-white rounded-2xl border border-slate-100 shadow-sm
-                                  overflow-hidden hover:shadow-md hover:-translate-y-0.5
-                                  transition-all duration-200">
-                    {/* stripe */}
-                    <div className="h-1.5" style={{
-                      background: s.status === "approved"
-                        ? "linear-gradient(90deg,#34d399,#059669)"
-                        : s.status === "rejected"
-                        ? "linear-gradient(90deg,#f87171,#ef4444)"
-                        : "linear-gradient(90deg,#60a5fa,#3b82f6)"
-                    }} />
-
-                    <div className="p-5">
-                      {/* header */}
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100
-                                          flex items-center justify-center flex-shrink-0">
-                            <FileText size={16} className="text-teal-500" />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-slate-800 text-sm">{s.subject_name}</h3>
-                            <span className="font-mono text-xs text-slate-400">{s.subject_code}</span>
-                          </div>
-                        </div>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold
-                                         px-2 py-1 rounded-full flex-shrink-0"
-                              style={{ background:meta.bg, color:meta.color, border:`1px solid ${meta.border}` }}>
-                          <Icon size={10} strokeWidth={2.5} />{meta.label}
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-slate-500 mb-0.5">
-                        <span className="font-semibold text-slate-700">Faculty: </span>
-                        {faculty?.name || "—"}
-                      </p>
-                      <p className="text-xs text-slate-400 mb-4">
-                        Sem {s.sem} ·{" "}
-                        {new Date(s.submitted_at || s.createdAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
-                      </p>
-
-                      {/* rejection remark */}
-                      {s.status === "rejected" && s.remark && (
-                        <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 mb-3 flex gap-2">
-                          <XCircle size={13} className="text-red-400 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-[10px] font-bold text-red-500 mb-0.5">Remark sent</p>
-                            <p className="text-xs text-red-700 line-clamp-2">{s.remark}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ── ACTION BUTTONS ────────────────────── */}
-                      <div className="flex gap-2">
-                        {/* PDF button */}
-                        {s.pdf_url ? (
-                          <button onClick={() => window.open(s.pdf_url, "_blank")}
-                                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs
-                                             font-bold bg-slate-100 border border-slate-200 text-slate-600
-                                             hover:bg-slate-200 transition-colors cursor-pointer flex-shrink-0">
-                            <Eye size={12} /> PDF
-                          </button>
-                        ) : (
-                          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs
-                                          font-bold bg-slate-50 border border-slate-100 text-slate-300
-                                          cursor-not-allowed flex-shrink-0">
-                            <Eye size={12} /> No PDF
-                          </div>
-                        )}
-
-                        {/* Approve + Reject — only for under review */}
-                        {s.status === "submitted" ? (
-                          <>
-                            <button
-                              onClick={() => handleApprove(s)}
-                              disabled={!!busy}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2
-                                         rounded-xl text-xs font-bold text-white transition-all
-                                         cursor-pointer hover:-translate-y-0.5 disabled:opacity-60
-                                         disabled:cursor-not-allowed"
-                              style={{ background:"#059669" }}
-                            >
-                              {busy === "approve"
-                                ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                : <><CheckCircle size={12} /> Approve</>
-                              }
-                            </button>
-                            <button
-                              onClick={() => openRejectModal(s)}
-                              disabled={!!busy}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2
-                                         rounded-xl text-xs font-bold text-white transition-all
-                                         cursor-pointer hover:-translate-y-0.5 disabled:opacity-60
-                                         disabled:cursor-not-allowed"
-                              style={{ background:"#dc2626" }}
-                            >
-                              <XCircle size={12} /> Reject
-                            </button>
-                          </>
-                        ) : (
-                          /* Already decided — show greyed label */
-                          <div className="flex-1 flex items-center justify-center gap-1.5 py-2
-                                          rounded-xl text-xs font-bold border border-slate-100
-                                          text-slate-400 bg-slate-50">
-                            {s.status === "approved"
-                              ? <><CheckCircle size={12} className="text-green-400" /> Approved</>
-                              : <><XCircle    size={12} className="text-red-400"   /> Rejected</>
-                            }
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                  <div key={sem} onClick={() => setSelectedSemester(sem)}
+                       className="bg-white rounded-2xl border border-slate-100 p-6 flex flex-col items-center justify-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all group">
+                    <Folder size={48} strokeWidth={1} className="text-teal-400 mb-3 fill-teal-50 group-hover:fill-teal-100 transition-colors" />
+                    <h3 className="font-extrabold text-slate-800 text-sm">Semester {sem}</h3>
+                    <p className="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full mt-2">
+                      {count} {count === 1 ? 'Syllabus' : 'Syllabi'}
+                    </p>
                   </div>
-                );
+                )
               })}
+            </div>
+          )}
+
+          {/* LIST VIEW */}
+          {!loading && !error && visible.length > 0 && selectedSemester !== null && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4 mb-4">
+                <button onClick={() => setSelectedSemester(null)} className="w-9 h-9 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors cursor-pointer group">
+                  <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+                </button>
+                <div>
+                  <h2 className="font-extrabold text-slate-800 text-xl tracking-tight">Semester {selectedSemester}</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Syllabus Directory</p>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-200/30 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                      <tr>
+                        <th className="px-6 py-5">Subject</th>
+                        <th className="px-6 py-5">Faculty</th>
+                        <th className="px-6 py-5">Status</th>
+                        <th className="px-6 py-5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100/80">
+                      {visible.filter(s => s.sem === selectedSemester).map(s => {
+                        const meta = STATUS_META[s.status] || STATUS_META.submitted;
+                        const Icon = meta.icon;
+                        const busy = actionLoading[s._id];
+                        return (
+                          <tr key={s._id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-5">
+                              <p className="font-bold text-slate-800">{s.subject_name}</p>
+                              <p className="font-mono text-[10px] text-slate-400 mt-0.5">{s.subject_code}</p>
+                            </td>
+                            <td className="px-6 py-5 font-semibold text-slate-600">{s.faculty_id?.name || "—"}</td>
+                            <td className="px-6 py-5">
+                              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm"
+                                    style={{ background:meta.bg, color:meta.color, border:`1px solid ${meta.border}` }}>
+                                <Icon size={12} />{meta.label}
+                              </span>
+                              {s.status === "rejected" && s.remark && (
+                                <p className="text-[10px] text-red-500 mt-1.5 truncate max-w-[150px] font-medium" title={s.remark}>
+                                  {s.remark}
+                                </p>
+                              )}
+                            </td>
+                            <td className="px-6 py-5">
+                              <div className="flex items-center justify-end gap-2.5">
+                                {/* PDF */}
+                                {s.pdf_url ? (
+                                  <button onClick={() => window.open(s.pdf_url, "_blank")} title="View PDF"
+                                          className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition-colors cursor-pointer shadow-sm">
+                                    <Eye size={14} />
+                                  </button>
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 cursor-not-allowed">
+                                    <Eye size={14} />
+                                  </div>
+                                )}
+                                
+                                {s.status === "submitted" ? (
+                                  <>
+                                    <button onClick={() => handleApprove(s)} disabled={!!busy} title="Approve"
+                                            className="w-8 h-8 rounded-full flex items-center justify-center text-white transition-all cursor-pointer shadow-sm hover:shadow-md disabled:shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                            style={{ background: "#059669" }}>
+                                      {busy==="approve"
+                                        ? <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                                        : <CheckCircle size={14} />}
+                                    </button>
+                                    
+                                    <button onClick={() => openRejectModal(s)} disabled={!!busy} title="Reject"
+                                            className="w-8 h-8 rounded-full flex items-center justify-center text-white transition-all cursor-pointer shadow-sm hover:shadow-md disabled:shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                            style={{ background: "#dc2626" }}>
+                                      <XCircle size={14} />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="px-3 py-1.5 rounded-full text-[10px] font-bold border border-slate-100 text-slate-400 bg-slate-50 flex items-center gap-1.5">
+                                    {s.status === "approved"
+                                      ? <><CheckCircle size={12} className="text-green-400" /> Approved</>
+                                      : <><XCircle size={12} className="text-red-400" /> Rejected</>
+                                    }
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
         </main>
