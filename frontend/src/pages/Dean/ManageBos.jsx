@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   LayoutDashboard, FileText, Users, GraduationCap,
   LogOut, User, Menu, X, Shield,
@@ -38,21 +39,22 @@ export default function DeanManageBOS() {
   const setF = (k) => (v) => setForm(f => ({ ...f, [k]:v }));
 
   async function fetchAllBos() {
-    const response = await fetch(`${API_URL}/api/v1/bos`,{
+    const fetchPromise = fetch(`${API_URL}/api/v1/bos`,{
         method:"GET",
         headers: {
             "Content-Type": "application/json",
         }
-    })
-    const data = await response.json();
+    }).then(async res => {
+      const data = await res.json();
+      if (data.status !== "Success") throw new Error(data.message);
+      return data;
+    });
 
-    if(data.status === "Success")
-    {
-        setBosList(data.bos)
-        alert(data.message)
-    }
-    else
-        alert(data.message)
+    toast.promise(fetchPromise, {
+        loading: 'Fetching Bos...',
+        success: 'Bos fetched successfully!',
+        error: err => err.message || 'Failed to fetch Bos'
+    }, { id: 'fetch-bos' }).then(data => setBosList(data.bos)).catch(() => {});
   }
 
   useEffect(()=>{
@@ -74,20 +76,20 @@ export default function DeanManageBOS() {
 
       if(response.ok)
       {
-        alert("Toggle done")
+        toast.success("Toggle done")
         setBosList(l => l.map(b => b._id === id ? { ...b, is_active:!b.is_active } : b));
       }
       else
         throw new Error(data.message)
     }catch (err) {
     console.error("POST /api/v1/faculty error:", err);
-    alert(err.message)
+    toast.error(err.message)
   }
   }
 
   async function handleAdd(e) {
     e.preventDefault();
-    if (!form.name || !form.department || !form.password) { alert("Fill all fields"); return; }
+    if (!form.name || !form.department || !form.password) { toast.error("Fill all fields"); return; }
     setAdding(true);
     // console.log(form)
     const response = await fetch(`${API_URL}/api/v1/bos`,{
@@ -99,7 +101,7 @@ export default function DeanManageBOS() {
     })
     const data = await response.json();
     console.log(data)
-    alert(data.message)
+    toast.success(data.message)
 
     setBosList(l => [{
       id:         `b${Date.now()}`,

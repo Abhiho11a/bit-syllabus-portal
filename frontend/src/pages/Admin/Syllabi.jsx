@@ -7,6 +7,7 @@ import {
   ChevronLeft, Building2, AlertTriangle,
   GitMerge
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -123,11 +124,11 @@ export default function AdminSyllabi() {
         method: "DELETE",
       });
       const json = await res.json();
-      if (!res.ok) { alert(json.message || "Failed to delete"); return; }
+      if (!res.ok) { toast.error(json.message || "Failed to delete"); return; }
       setAllData(d => d.filter(a => a._id !== id));
     } catch (err) {
       console.error(err);
-      alert("Server error. Try again.");
+      toast.error("Server error. Try again.");
     } finally {
       setDeletingId(null);
     }

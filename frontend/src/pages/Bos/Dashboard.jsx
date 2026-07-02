@@ -9,6 +9,7 @@ import {
   Plus, Send, RefreshCw, UserCircle, Building2, XCircle,
   GitMerge
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -107,7 +108,7 @@ export default function BosDashboard() {
   async function handleAssign(e) {
     e.preventDefault();
     if (!form.faculty_id || !form.subject_code || !form.subject_name || !form.sem) {
-      alert("Please fill all fields"); return;
+      toast.error("Please fill all fields"); return;
     }
     setAssigning(true);
     try {
@@ -124,13 +125,13 @@ export default function BosDashboard() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { alert(data.message || "Failed to assign"); return; }
+      if (!res.ok) { toast.error(data.message || "Failed to assign"); return; }
       setForm({ faculty_id:"", subject_code:"", subject_name:"", sem:"" });
       setShowModal(false);
       fetchData(view); // refresh stats
     } catch (err) {
       console.error(err);
-      alert("Server error. Try again.");
+      toast.error("Server error. Try again.");
     } finally {
       setAssigning(false);
     }

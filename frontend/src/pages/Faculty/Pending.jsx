@@ -7,6 +7,7 @@ import {
   RotateCcw, Eye, AlertCircle, Loader2, X as XIcon,
   Download, RefreshCw as RefreshIcon
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -176,7 +177,7 @@ export default function FacultyPending() {
         fetchAssignments();
       }, 2500);
     } catch (err) {
-      alert("Failed to save submission: " + err.message);
+      toast.error("Failed to save submission: " + err.message);
       fetchAssignments();
     } finally {
       setSubmitting(false);
@@ -371,17 +372,18 @@ export default function FacultyPending() {
 
           {/* Loading skeletons */}
           {loading && (
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-3">
               {[1,2,3,4].map(i => (
-                <div key={i} className="bg-white rounded-2xl border border-slate-100 p-5 animate-pulse">
-                  <div className="flex gap-3 mb-4">
+                <div key={i} className="bg-white rounded-2xl border border-slate-100 p-5 animate-pulse flex flex-col md:flex-row items-center gap-4">
+                  <div className="flex items-center gap-4 w-full md:w-auto md:min-w-[220px]">
                     <div className="w-11 h-11 bg-slate-100 rounded-xl flex-shrink-0" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-slate-100 rounded w-3/4" />
-                      <div className="h-3 bg-slate-100 rounded w-1/3" />
+                      <div className="h-4 bg-slate-100 rounded w-32" />
+                      <div className="h-3 bg-slate-100 rounded w-20" />
                     </div>
                   </div>
-                  <div className="h-10 bg-slate-100 rounded-xl" />
+                  <div className="hidden md:block h-4 bg-slate-100 rounded w-24 flex-1" />
+                  <div className="w-full md:w-32 h-10 bg-slate-100 rounded-xl" />
                 </div>
               ))}
             </div>
@@ -396,9 +398,9 @@ export default function FacultyPending() {
             </div>
           )}
 
-          {/* Task cards */}
+          {/* Task lists */}
           {!loading && filtered.length > 0 && (
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-3">
               {filtered.map(task => {
                 const days            = daysSince(task.createdAt);
                 const isJustSubmitted = justSubmitted === task._id;
@@ -409,24 +411,24 @@ export default function FacultyPending() {
                 if (isJustSubmitted) {
                   return (
                     <div key={task._id}
-                         className="bg-white rounded-2xl border border-green-200 shadow-sm
-                                    overflow-hidden"
+                         className="bg-white rounded-2xl border border-green-200 shadow-sm overflow-hidden relative flex flex-col md:flex-row items-center p-5 pl-7 md:pr-6"
                          style={{ animation:"fadeIn .3s ease" }}>
-                      <div className="h-1.5 bg-gradient-to-r from-green-400 to-emerald-500" />
-                      <div className="p-5">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-11 h-11 rounded-xl bg-green-50 border border-green-100
-                                          flex items-center justify-center flex-shrink-0">
-                            <CheckCircle size={20} className="text-green-500" />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-slate-800 text-sm">{task.subject_name}</h3>
-                            <span className="font-mono text-xs text-slate-400">{task.subject_code}</span>
-                          </div>
+                      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-green-400 to-emerald-500" />
+                      
+                      <div className="flex items-center gap-3.5 mb-3 md:mb-0 md:min-w-[260px] w-full md:w-auto">
+                        <div className="w-11 h-11 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0">
+                          <CheckCircle size={20} className="text-green-500" />
                         </div>
-                        <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-center">
+                        <div>
+                          <h3 className="font-bold text-slate-800 text-sm">{task.subject_name}</h3>
+                          <span className="font-mono text-xs text-slate-400">{task.subject_code}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1 flex justify-end w-full md:w-auto">
+                        <div className="bg-green-50 border border-green-100 rounded-xl px-5 py-2.5 text-center w-full md:w-auto">
                           <p className="text-sm font-bold text-green-700">✅ Submitted successfully!</p>
-                          <p className="text-xs text-green-500 mt-0.5">Sent to coordinator for review</p>
+                          <p className="text-[11px] text-green-600 mt-0.5">Sent to coordinator for review</p>
                         </div>
                       </div>
                     </div>
@@ -436,88 +438,87 @@ export default function FacultyPending() {
                 // ── Card: normal state (pending or submitted) ────
                 return (
                   <div key={task._id}
-                       className="bg-white rounded-2xl border border-slate-100 shadow-sm
-                                  overflow-hidden hover:shadow-md hover:-translate-y-1 transition-all duration-200">
-                    <div className="h-1.5" style={{
+                       className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden relative group
+                                  hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200">
+                    <div className="absolute left-0 top-0 w-full h-1 md:w-1.5 md:h-full transition-all" style={{
                       background: isPending
                         ? (days > 14
-                          ? "linear-gradient(90deg,#f87171,#ef4444)"
+                          ? "linear-gradient(180deg,#f87171,#ef4444)"
                           : days > 7
-                          ? "linear-gradient(90deg,#fbbf24,#f59e0b)"
-                          : "linear-gradient(90deg,#60a5fa,#3b82f6)")
-                        : "linear-gradient(90deg,#34d399,#10b981)"
+                          ? "linear-gradient(180deg,#fbbf24,#f59e0b)"
+                          : "linear-gradient(180deg,#60a5fa,#3b82f6)")
+                        : "linear-gradient(180deg,#34d399,#10b981)"
                     }} />
 
-                    <div className="p-5">
-                      <div className="flex items-start justify-between gap-3 mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-11 h-11 rounded-xl border flex items-center justify-center flex-shrink-0
-                                          ${isSubmitted 
-                                            ? "bg-green-50 border-green-100" 
-                                            : "bg-blue-50 border-blue-100"}`}>
-                            <BookOpen size={18} className={isSubmitted ? "text-green-600" : "text-blue-600"} />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-slate-800 text-sm leading-snug">
-                              {task.subject_name}
-                            </h3>
-                            <span className="font-mono text-xs text-slate-400 mt-0.5 block">
-                              {task.subject_code}
-                            </span>
-                          </div>
+                    <div className="p-5 md:pl-7 md:pr-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                      
+                      {/* Left: Icon & Title */}
+                      <div className="flex items-center gap-3.5 md:min-w-[280px]">
+                        <div className={`w-11 h-11 rounded-xl border flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105
+                                        ${isSubmitted 
+                                          ? "bg-green-50 border-green-100 text-green-600" 
+                                          : "bg-blue-50 border-blue-100 text-blue-600"}`}>
+                          <BookOpen size={18} />
                         </div>
-                        <UrgencyBadge days={days} status={task.status} />
-                      </div>
-
-                      <div className="flex gap-4 mb-3">
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                          <span className="w-5 h-5 rounded-md bg-slate-100 flex items-center justify-center
-                                           font-bold text-[10px] text-slate-600">S{task.sem}</span>
-                          Semester {task.sem}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                          <Calendar size={11} className="text-slate-400" />
-                          {new Date(task.createdAt).toLocaleDateString("en-IN",{
-                            day:"numeric", month:"short", year:"numeric"
-                          })}
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-slate-800 text-sm leading-snug group-hover:text-blue-600 transition-colors truncate">
+                            {task.subject_name}
+                          </h3>
+                          <span className="font-mono text-xs text-slate-400 mt-0.5 block truncate">
+                            {task.subject_code}
+                          </span>
                         </div>
                       </div>
 
-                      <p className="text-xs text-slate-400 mb-4">
-                        Assigned by{" "}
-                        <span className="font-semibold text-slate-600">
-                          {task.assigned_by?.name || "BOS"}
-                        </span>
-                      </p>
-
-                      {/* PENDING STATUS: Show "Fill Syllabus" button */}
-                      {isPending && (
-                        <button onClick={() => openSyllabusForm(task)}
-                                className="w-full flex items-center justify-center gap-2
-                                           bg-[#0f2744] text-white text-sm font-bold py-2.5 rounded-xl
-                                           hover:bg-[#1e3a5f] transition-all hover:-translate-y-0.5 cursor-pointer">
-                          Fill Syllabus <ArrowRight size={14} />
-                        </button>
-                      )}
-
-                      {/* SUBMITTED STATUS: Show "Refill Syllabus" and "View PDF" buttons */}
-                      {isSubmitted && (
-                        <div className="flex gap-2">
-                          <button onClick={() => refillSyllabusForm(task)}
-                                  className="flex-1 flex items-center justify-center gap-2
-                                             bg-[#0f2744] text-white text-sm font-bold py-2.5 rounded-xl
-                                             hover:bg-[#1e3a5f] transition-all hover:-translate-y-0.5 cursor-pointer">
-                            <RefreshIcon size={14} /> Refill
-                          </button>
-                          <button onClick={() => viewPDF(task.pdf_url, task.subject_name)}
-                                  className="flex-shrink-0 flex items-center justify-center gap-2
-                                             bg-slate-100 text-slate-700 px-3.5 py-2.5 rounded-xl
-                                             hover:bg-slate-200 transition-all cursor-pointer"
-                                  title="View PDF">
-                            <Eye size={14} />
-                          </button>
+                      {/* Middle: Details */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 md:flex-1 gap-y-2 gap-x-4 items-center text-xs text-slate-500 md:px-4">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-[10px] text-slate-600">S{task.sem}</span>
+                          <span className="hidden lg:inline">Semester {task.sem}</span>
                         </div>
-                      )}
+                        <div className="flex items-center gap-1.5">
+                          <Calendar size={13} className="text-slate-400" />
+                          <span className="hidden xl:inline">{new Date(task.createdAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</span>
+                          <span className="xl:hidden">{new Date(task.createdAt).toLocaleDateString("en-IN",{month:"short",year:"2-digit"})}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 hidden md:flex">
+                          <User size={13} className="text-slate-400" />
+                          <span className="truncate">By {task.assigned_by?.name || "BOS"}</span>
+                        </div>
+                        <div className="flex items-center md:justify-end">
+                           <UrgencyBadge days={days} status={task.status} />
+                        </div>
+                      </div>
+
+                      {/* Right: Actions */}
+                      <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0 flex-shrink-0">
+                        {isPending && (
+                          <button onClick={() => openSyllabusForm(task)}
+                                  className="w-full md:w-auto flex items-center justify-center gap-2
+                                             bg-[#0f2744] text-white text-sm font-bold px-6 py-2.5 rounded-xl
+                                             hover:bg-[#1e3a5f] transition-all hover:-translate-y-0.5 cursor-pointer shadow-md shadow-slate-900/10">
+                            Fill Syllabus <ArrowRight size={14} />
+                          </button>
+                        )}
+
+                        {isSubmitted && (
+                          <>
+                            <button onClick={() => refillSyllabusForm(task)}
+                                    className="flex-1 md:flex-none flex items-center justify-center gap-2
+                                               bg-[#0f2744] text-white text-sm font-bold px-6 py-2.5 rounded-xl
+                                               hover:bg-[#1e3a5f] transition-all hover:-translate-y-0.5 cursor-pointer shadow-md shadow-slate-900/10">
+                              <RefreshIcon size={14} /> Refill
+                            </button>
+                            <button onClick={() => viewPDF(task.pdf_url, task.subject_name)}
+                                    className="flex-shrink-0 flex items-center justify-center gap-2
+                                               bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl
+                                               hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition-all cursor-pointer shadow-sm"
+                                    title="View PDF">
+                              <Eye size={16} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

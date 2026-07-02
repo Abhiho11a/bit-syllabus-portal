@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 // import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard, Users, ClipboardList, Plus,
@@ -51,16 +52,16 @@ export default function BosFaculty() {
     const data = await response.json()
     if(!response.ok)
     {
-      alert("Something went wrong")
+      toast.error("Something went wrong")
       return
     }
 
-    alert("Data fetched successfully")
+    // toast.success("Data fetched successfully")
     // console.log(data)
     setFaculty(data.users)
   }catch(err){
     console.error(err);
-    alert("Server error. Try again.");
+    toast.error("Server error. Try again.");
   }
   }
 
@@ -81,7 +82,7 @@ export default function BosFaculty() {
 
       if(response.ok)
       {
-        alert("Toggle done")
+        toast.success("Toggle done")
         setFaculty(f => f.map(m =>
           m._id === id ? { ...m, is_active: !m.is_active } : m
         ));
@@ -90,14 +91,14 @@ export default function BosFaculty() {
         throw new Error(data.message)
     }catch (err) {
     console.error("POST /api/v1/faculty error:", err);
-    alert(err.message)
+    toast.error(err.message)
   }
   }
 
   async function handleAdd(e) {
     e.preventDefault();
     if (!form.name || !form.password) {
-      alert("Please fill all fields"); return;
+      toast.error("Please fill all fields"); return;
     }
     setAdding(true);
     try {
@@ -111,7 +112,7 @@ export default function BosFaculty() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { alert(data.message || "Failed to add faculty"); return; }
+      if (!res.ok) { toast.error(data.message || "Failed to add faculty"); return; }
 
       // Optimistic update — add the returned faculty to the top of the list
       setFaculty(f => [data.faculty, ...f]);
@@ -119,7 +120,7 @@ export default function BosFaculty() {
       setShowAdd(false);
     } catch (err) {
       console.error(err);
-      alert("Server error. Try again.");
+      toast.error("Server error. Try again.");
     } finally {
       setAdding(false);
     }
@@ -144,7 +145,7 @@ export default function BosFaculty() {
 
   } catch (err) {
     console.error(err);
-    alert("Failed to delete: " + err.message);
+    toast.error("Failed to delete: " + err.message);
   }
 }
 

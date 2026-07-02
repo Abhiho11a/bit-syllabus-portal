@@ -68,6 +68,11 @@ const AssignmentSchema = new mongoose.Schema({
       type:    Date,
       default: null,
     },
+
+    is_resubmitted: {
+      type:    Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,   // createdAt = assigned date, updatedAt = last modified

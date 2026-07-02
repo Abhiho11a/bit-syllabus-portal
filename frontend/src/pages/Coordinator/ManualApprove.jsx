@@ -4,13 +4,16 @@ import {
   LayoutDashboard, FileText, Users,
   LogOut, User, Menu, X, FileCheck2,
   Upload, Download, FilePlus2, CheckCircle2,
-  GitMerge
+  GitMerge, Plus
 } from "lucide-react";
 import { PDFDocument, rgb } from "pdf-lib";
 import barcodeImg from "../../assets/barcode.jpeg";
+import toast from "react-hot-toast";
+import ProfileEditModal from "../../components/ProfileEditModal";
 
 const NAV_LINKS = [
   { label:"Dashboard", path:"/coordinator/dashboard", icon: LayoutDashboard },
+  { label:"Assign",    path:"/coordinator/assign",    icon: Plus },
   { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText         },
   { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
   { label:"Manual Approve", path:"/coordinator/manual-approve", icon: FileCheck2 },
@@ -26,6 +29,7 @@ export default function CoordinatorManualApprove() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [processing, setProcessing] = useState(false);
   const fileInputRef = useRef(null);
@@ -37,6 +41,22 @@ export default function CoordinatorManualApprove() {
   function onFileChange(e) {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+    }
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+        setSelectedFile(file);
+      } else {
+        toast.error("Please upload a PDF file.");
+      }
     }
   }
 
@@ -127,9 +147,10 @@ export default function CoordinatorManualApprove() {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+      toast.success("PDF modified and downloaded successfully!");
     } catch (err) {
       console.error(err);
-      alert("Failed to modify PDF. Please ensure it is a valid PDF file.");
+      toast.error("Failed to modify PDF. Please ensure it is a valid PDF file.");
     } finally {
       setProcessing(false);
     }
@@ -162,7 +183,9 @@ export default function CoordinatorManualApprove() {
           })}
         </nav>
         <div className="px-4 py-4 border-t border-white/10">
-          <div className="flex items-center gap-3 bg-white/8 rounded-xl px-3 py-2.5 mb-2">
+          <div onClick={() => setShowProfileModal(true)}
+               className="flex items-center gap-3 bg-white/8 hover:bg-white/15 rounded-xl px-3 py-2.5 mb-2 cursor-pointer transition-colors"
+               title="Edit Profile">
             <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0">
               <User size={14} className="text-teal-300" />
             </div>
@@ -219,7 +242,9 @@ export default function CoordinatorManualApprove() {
                 />
                 
                 <label 
-                  htmlFor="pdf-upload" 
+                  htmlFor="pdf-upload"
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop} 
                   className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
                     selectedFile ? "border-teal-500 bg-teal-50" : "border-slate-300 hover:border-teal-400 hover:bg-slate-50"
                   }`}
@@ -241,25 +266,27 @@ export default function CoordinatorManualApprove() {
                   </div>
                 </label>
 
-                <div className="mt-8 flex justify-center">
-                  <button 
-                    onClick={handleApproveAndDownload}
-                    disabled={!selectedFile || processing}
-                    className="flex items-center gap-2 px-8 py-3.5 bg-teal-600 text-white font-bold rounded-xl text-sm md:text-base transition-all hover:bg-teal-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
-                  >
-                    {processing ? (
-                      <>
-                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Download size={18} />
-                        Approve & Download PDF
-                      </>
-                    )}
-                  </button>
-                </div>
+                {selectedFile && (
+                  <div className="mt-8 flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <button 
+                      onClick={handleApproveAndDownload}
+                      disabled={!selectedFile || processing}
+                      className="flex items-center gap-2 px-8 py-3.5 bg-teal-600 text-white font-bold rounded-xl text-sm md:text-base transition-all hover:bg-teal-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
+                    >
+                      {processing ? (
+                        <>
+                          <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Download size={18} />
+                          Approve & Download PDF
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
               
               <div className="bg-slate-50 px-8 py-4 border-t border-slate-100 flex items-center justify-center gap-2">
@@ -270,6 +297,10 @@ export default function CoordinatorManualApprove() {
           </div>
         </main>
       </div>
+      
+      {showProfileModal && (
+        <ProfileEditModal user={user} onClose={() => setShowProfileModal(false)} />
+      )}
     </div>
   );
 }

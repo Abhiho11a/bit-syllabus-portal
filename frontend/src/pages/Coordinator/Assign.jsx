@@ -1,23 +1,24 @@
-// pages/bos/Assign.jsx
+// pages/coordinator/Assign.jsx
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  LayoutDashboard, Users, ClipboardList, Plus,
+  LayoutDashboard, FileText, Plus,
   LogOut, User, Menu, X, BookOpen,
   Send, ChevronLeft, CheckCircle, UserCircle, Building2,
-  GitMerge
+  GitMerge, FileCheck2, Users
 } from "lucide-react";
+import ProfileEditModal from "../../components/ProfileEditModal";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 const NAV_LINKS = [
-  { label:"Dashboard",   path:"/bos/dashboard",  icon: LayoutDashboard },
-  { label:"Assign",      path:"/bos/assign",      icon: Plus            },
-  { label:"Assignments", path:"/bos/assignments", icon: ClipboardList   },
-  { label:"Faculty",     path:"/bos/faculty",     icon: Users           },
-  { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
+  { label:"Dashboard", path:"/coordinator/dashboard", icon: LayoutDashboard },
+  { label:"Assign",    path:"/coordinator/assign",    icon: Plus },
+  { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText },
+  { label:"Merge Files", path:"/mergefiles",          icon: GitMerge },
+  { label:"Manual Approve", path:"/coordinator/manual-approve", icon: FileCheck2 },
 ];
 
 const FACULTY_VIEWS = [
@@ -25,11 +26,12 @@ const FACULTY_VIEWS = [
   { id:"all",  label:"All in Dept", icon: Building2  },
 ];
 
-export default function BosAssign() {
+export default function CoordinatorAssign() {
   const navigate = useNavigate();
   const user     = JSON.parse(localStorage.getItem("user"));
 
   const [sidebarOpen,  setSidebarOpen]  = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [submitted,    setSubmitted]    = useState(false);
   const [loading,      setLoading]      = useState(false);
   const [allFaculty,   setAllFaculty]   = useState([]);   // all dept faculty from API
@@ -50,7 +52,7 @@ export default function BosAssign() {
   }, []);
 
   // Filter based on toggle:
-  // "mine" → only faculty whose created_by === this BOS's _id
+  // "mine" → only faculty whose created_by === this Coordinator's _id
   // "all"  → everyone in the department
   const facultyList = facultyView === "mine"
   ? allFaculty.filter(f => 
@@ -113,13 +115,13 @@ export default function BosAssign() {
                         transition-all duration-300 overflow-hidden flex-shrink-0
                         ${sidebarOpen ? "w-64" : "w-0 md:w-64"}`}>
         <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
-          <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-400/30
+          <div className="w-9 h-9 rounded-xl bg-teal-500/20 border border-teal-400/30
                           flex items-center justify-center flex-shrink-0">
-            <BookOpen size={17} className="text-purple-300" />
+            <Users size={17} className="text-teal-300" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-extrabold text-white truncate">BOS Portal</p>
-            <p className="text-[11px] text-purple-300 font-mono">{user?.department || "—"}</p>
+            <p className="text-sm font-extrabold text-white truncate">Coordinator</p>
+            <p className="text-[11px] text-teal-300 font-mono">{user?.department || "—"}</p>
           </div>
           <button onClick={() => setSidebarOpen(false)}
                   className="md:hidden text-white/40 hover:text-white cursor-pointer">
@@ -133,20 +135,22 @@ export default function BosAssign() {
               <button key={path} onClick={() => { navigate(path); setSidebarOpen(false); }}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm
                                  font-semibold transition-all cursor-pointer text-left
-                                 ${active ? "bg-white/15 text-white" : "text-purple-200 hover:bg-white/8 hover:text-white"}`}>
+                                 ${active ? "bg-white/15 text-white" : "text-teal-200 hover:bg-white/8 hover:text-white"}`}>
                 <Icon size={16} strokeWidth={2} />{label}
               </button>
             );
           })}
         </nav>
         <div className="px-4 py-4 border-t border-white/10">
-          <div className="flex items-center gap-3 bg-white/8 rounded-xl px-3 py-2.5 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-              <User size={14} className="text-purple-300" />
+          <div onClick={() => setShowProfileModal(true)}
+               className="flex items-center gap-3 bg-white/8 hover:bg-white/15 rounded-xl px-3 py-2.5 mb-2 cursor-pointer transition-colors"
+               title="Edit Profile">
+            <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0">
+              <User size={14} className="text-teal-300" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-white truncate">{user?.name || "BOS"}</p>
-              <p className="text-[10px] text-purple-300 truncate">{user?.department || "—"}</p>
+              <p className="text-xs font-bold text-white truncate">{user?.name || "Coordinator"}</p>
+              <p className="text-[10px] text-teal-300 truncate">{user?.department || "—"}</p>
             </div>
           </div>
           <button onClick={handleLogout}
@@ -174,17 +178,16 @@ export default function BosAssign() {
             <h1 className="font-extrabold text-slate-800 text-base">Assign Syllabus</h1>
             <p className="text-xs text-slate-400 hidden md:block">Bangalore Institute of Technology</p>
           </div>
-          <div className="flex items-center gap-2 bg-purple-50 border border-purple-100
-                          px-3 py-1.5 rounded-xl">
-            <BookOpen size={13} className="text-purple-600" />
-            <span className="text-xs font-bold text-purple-700">BOS</span>
+          <div className="flex items-center gap-2 bg-teal-50 border border-teal-100 px-3 py-1.5 rounded-xl">
+            <Users size={13} className="text-teal-600" />
+            <span className="text-xs font-bold text-teal-700">Coordinator</span>
           </div>
         </header>
 
         <main className="flex-1 p-5 md:p-8 flex items-start justify-center">
           <div className="w-full max-w-lg">
 
-            <button onClick={() => navigate("/bos/dashboard")}
+            <button onClick={() => navigate("/coordinator/dashboard")}
                     className="flex items-center gap-1.5 text-sm text-slate-500 font-semibold
                                hover:text-slate-800 transition-colors mb-6 cursor-pointer">
               <ChevronLeft size={15} /> Back to Dashboard
@@ -214,7 +217,7 @@ export default function BosAssign() {
                                      hover:-translate-y-0.5">
                     Assign Another
                   </button>
-                  <button onClick={() => navigate("/bos/assignments")}
+                  <button onClick={() => navigate("/coordinator/dashboard")}
                           className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600
                                      text-sm font-bold hover:bg-slate-50 transition-all cursor-pointer">
                     View Assignments
@@ -228,10 +231,10 @@ export default function BosAssign() {
 
                 {/* Card header */}
                 <div className="px-7 pt-7 pb-5"
-                     style={{ background:"linear-gradient(135deg,#f5f3ff,white)" }}>
-                  <div className="w-12 h-12 rounded-2xl bg-purple-100 border border-purple-200
+                     style={{ background:"linear-gradient(135deg,#f0fdfa,white)" }}>
+                  <div className="w-12 h-12 rounded-2xl bg-teal-100 border border-teal-200
                                   flex items-center justify-center mb-3">
-                    <Plus size={22} className="text-purple-600" />
+                    <Plus size={22} className="text-teal-600" />
                   </div>
                   <h2 className="text-xl font-extrabold text-slate-800">Assign Syllabus to Faculty</h2>
                   <p className="text-sm text-slate-400 mt-1">
@@ -271,8 +274,8 @@ export default function BosAssign() {
                       value={form.faculty_id}
                       onChange={e => setF("faculty_id")(e.target.value)}
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5
-                                 text-sm text-slate-800 outline-none focus:border-purple-400
-                                 focus:ring-2 focus:ring-purple-50 transition-all cursor-pointer">
+                                 text-sm text-slate-800 outline-none focus:border-teal-400
+                                 focus:ring-2 focus:ring-teal-50 transition-all cursor-pointer">
                       <option value="">
                         {facultyList.length === 0
                           ? facultyView === "mine"
@@ -304,8 +307,8 @@ export default function BosAssign() {
                         onChange={e => setF("subject_code")(e.target.value.toUpperCase())}
                         placeholder="e.g. BCS300"
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5
-                                   text-sm font-mono text-slate-800 outline-none focus:border-purple-400
-                                   focus:ring-2 focus:ring-purple-50 transition-all placeholder:text-slate-300" />
+                                   text-sm font-mono text-slate-800 outline-none focus:border-teal-400
+                                   focus:ring-2 focus:ring-teal-50 transition-all placeholder:text-slate-300" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
@@ -315,8 +318,8 @@ export default function BosAssign() {
                         value={form.sem}
                         onChange={e => setF("sem")(e.target.value)}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5
-                                   text-sm text-slate-800 outline-none focus:border-purple-400
-                                   focus:ring-2 focus:ring-purple-50 transition-all cursor-pointer">
+                                   text-sm text-slate-800 outline-none focus:border-teal-400
+                                   focus:ring-2 focus:ring-teal-50 transition-all cursor-pointer">
                         <option value="">Select…</option>
                         {[1,2,3,4,5,6,7,8].map(s => (
                           <option key={s} value={s}>Sem {s}</option>
@@ -335,14 +338,14 @@ export default function BosAssign() {
                       onChange={e => setF("subject_name")(e.target.value)}
                       placeholder="e.g. Mathematics III for CS"
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5
-                                 text-sm text-slate-800 outline-none focus:border-purple-400
-                                 focus:ring-2 focus:ring-purple-50 transition-all placeholder:text-slate-300" />
+                                 text-sm text-slate-800 outline-none focus:border-teal-400
+                                 focus:ring-2 focus:ring-teal-50 transition-all placeholder:text-slate-300" />
                   </div>
 
                   {/* Info note */}
-                  <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 flex gap-2.5">
-                    <BookOpen size={14} className="text-purple-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-purple-700 leading-relaxed">
+                  <div className="bg-teal-50 border border-teal-100 rounded-xl px-4 py-3 flex gap-2.5">
+                    <BookOpen size={14} className="text-teal-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-teal-700 leading-relaxed">
                       After assigning, the faculty member will see this subject in their
                       <span className="font-bold"> Pending Tasks</span> page and can start filling the syllabus.
                     </p>
@@ -355,8 +358,8 @@ export default function BosAssign() {
                                text-sm font-bold text-white transition-all cursor-pointer
                                hover:-translate-y-0.5 mt-1 disabled:cursor-not-allowed"
                     style={{
-                      background:  loading ? "#94a3b8" : "#6d28d9",
-                      boxShadow:   loading ? "none" : "0 6px 20px #6d28d933",
+                      background:  loading ? "#94a3b8" : "#0d9488",
+                      boxShadow:   loading ? "none" : "0 6px 20px #0d948833",
                     }}>
                     {loading
                       ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Assigning…</>
@@ -369,6 +372,10 @@ export default function BosAssign() {
           </div>
         </main>
       </div>
+
+      {showProfileModal && (
+        <ProfileEditModal user={user} onClose={() => setShowProfileModal(false)} />
+      )}
 
       <style>{`@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}`}</style>
     </div>

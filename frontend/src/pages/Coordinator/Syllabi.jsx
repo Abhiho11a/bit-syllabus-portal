@@ -5,13 +5,18 @@ import {
   Menu, X, Users, Search, Eye,
   CheckCircle, XCircle, Clock, RefreshCw,
   Send, AlertCircle,
-  GitMerge, FileCheck2, ArrowLeft, Folder
+  GitMerge, FileCheck2, ArrowLeft, Folder, Plus
 } from "lucide-react";
+import { PDFDocument, rgb } from "pdf-lib";
+import barcodeImg from "../../assets/barcode.jpeg";
+import toast from "react-hot-toast";
+import ProfileEditModal from "../../components/ProfileEditModal";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 const STATUS_META = {
   submitted: { label:"Under Review", color:"#2563eb", bg:"#eff6ff", border:"#bae6fd", icon: Clock       },
+  resubmitted: { label:"Resubmitted", color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe", icon: RefreshCw },
   approved:  { label:"Approved",     color:"#059669", bg:"#ecfdf5", border:"#6ee7b7", icon: CheckCircle  },
   rejected:  { label:"Rejected",     color:"#dc2626", bg:"#fef2f2", border:"#fca5a5", icon: XCircle      },
 };
@@ -25,6 +30,7 @@ const TABS = [
 
 const NAV_LINKS = [
   { label:"Dashboard", path:"/coordinator/dashboard", icon: LayoutDashboard },
+  { label:"Assign",    path:"/coordinator/assign",    icon: Plus },
   { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText         },
   { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
   { label:"Manual Approve", path:"/coordinator/manual-approve", icon: FileCheck2 },
@@ -43,12 +49,18 @@ export default function CoordinatorSyllabi() {
   const [selectedSemester, setSelectedSemester] = useState(null);
 
   // ── Reject modal state ───────────────────────────────────────
-  const [rejectModal, setRejectModal] = useState(null); // holds the syllabus being rejected
+  const [rejectModal, setRejectModal] = useState(null);
   const [remark, setRemark]           = useState("");
   const [submitting, setSubmitting]   = useState(false);
 
+  // ── Approve modal state ──────────────────────────────────────
+  const [approveModal, setApproveModal] = useState(null);
+
+  // ── Profile modal state ──────────────────────────────────────
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
   // ── Per-card action loading ──────────────────────────────────
-  const [actionLoading, setActionLoading] = useState({}); // { [id]: true }
+  const [actionLoading, setActionLoading] = useState({});
 
   useEffect(() => { fetchSyllabi(); }, []);
 
@@ -68,28 +80,99 @@ export default function CoordinatorSyllabi() {
     }
   }
 
-  // ── Approve directly ─────────────────────────────────────────
-  async function handleApprove(s) {
+  // ── HELPER: upload PDF bytes → Cloudinary ──
+  async function uploadPDFToCloudinary(pdfBytes, assignmentId) {
+    const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+    const pdfFile = new File([pdfBlob], `approved_${assignmentId}.pdf`, { type: "application/pdf" });
+    const fd = new FormData();
+    fd.append("file", pdfFile);
+    fd.append("upload_preset", "v1conote");
+    fd.append("folder", "syllabi");
+    fd.append("public_id", `approved_${assignmentId}`);
+    const cloudRes = await fetch("https://api.cloudinary.com/v1_1/dxsgtzp7i/image/upload", { method: "POST", body: fd });
+    const cloudData = await cloudRes.json();
+    if (!cloudData.secure_url) throw new Error("Cloudinary upload failed");
+    let pdfUrl = cloudData.secure_url;
+    pdfUrl = pdfUrl.replace("/image/upload/", "/image/upload/");
+    if (!pdfUrl.endsWith(".pdf")) pdfUrl += ".pdf";
+    return pdfUrl;
+  }
+
+  async function loadBarcodeBytes(src) {
+    const response = await fetch(src);
+    const blob = await response.blob();
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
+  // ── Confirm Approve with Barcode & Email ─────────────────────
+  async function confirmApprove() {
+    if (!approveModal) return;
+    const s = approveModal;
+    setSubmitting(true);
     setActionLoading(l => ({ ...l, [s._id]:"approve" }));
     try {
+      const pdfRes = await fetch(s.pdf_url);
+      if (!pdfRes.ok) throw new Error("Could not fetch PDF");
+      const pdfBytes = await pdfRes.arrayBuffer();
+
+      const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+      const pages  = pdfDoc.getPages();
+
+      const barcodeBytes = await loadBarcodeBytes(barcodeImg);
+      const barcodeImage = await pdfDoc.embedJpg(barcodeBytes);
+
+      const formatted = new Date().toLocaleString("en-IN", {
+        day: "2-digit", month: "short", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      });
+
+      pages.forEach((page, i) => {
+        const { width } = page.getSize();
+        page.drawRectangle({ x: 0, y: 0, width, height: 30, color: rgb(1, 1, 1) });
+        let textX = 20;
+        if (barcodeImage) {
+          page.drawImage(barcodeImage, { x: 30, y: 5, width: 60, height: 20 });
+          textX = 90;
+        }
+        page.drawText(`Generated on: ${formatted}`, { x: textX, y: 10, size: 9, color: rgb(0, 0, 0) });
+        page.drawText(`${i + 1} / ${pages.length}`, { x: width - 60, y: 10, size: 10, color: rgb(0, 0, 0) });
+      });
+
+      const modifiedBytes = await pdfDoc.save();
+      const newPdfUrl = await uploadPDFToCloudinary(modifiedBytes, s._id);
+
       const res = await fetch(
         `${API_URL}/api/v1/assignments/${s._id}/review`,
         {
           method:  "PATCH",
           headers: { "Content-Type":"application/json" },
-          body:    JSON.stringify({ status:"approved", remark:"" }),
+          body:    JSON.stringify({ 
+            status: "approved", 
+            remark: "", 
+            pdf_url: newPdfUrl,
+            target_email: user?.email // Automatically use coordinator's email
+          }),
         }
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      // update locally — no need to refetch
+      
       setSyllabi(prev => prev.map(a =>
-        a._id === s._id ? { ...a, status:"approved" } : a
+        a._id === s._id ? { ...a, status:"approved", pdf_url: newPdfUrl } : a
       ));
+      
+      if (user?.email) {
+        toast.success(`Approved! PDF automatically sent to ${user.email}`);
+      } else {
+        toast.success("Syllabus approved and barcode added!");
+      }
+      
+      setApproveModal(null);
     } catch (err) {
-      alert("Failed to approve: " + err.message);
+      toast.error("Failed to approve: " + err.message);
     } finally {
       setActionLoading(l => ({ ...l, [s._id]:null }));
+      setSubmitting(false);
     }
   }
 
@@ -120,7 +203,7 @@ export default function CoordinatorSyllabi() {
       setRejectModal(null);
       setRemark("");
     } catch (err) {
-      alert("Failed to reject: " + err.message);
+      toast.error("Failed to reject: " + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -180,7 +263,9 @@ export default function CoordinatorSyllabi() {
           })}
         </nav>
         <div className="px-4 py-4 border-t border-white/10">
-          <div className="flex items-center gap-3 bg-white/8 rounded-xl px-3 py-2.5 mb-2">
+          <div onClick={() => setShowProfileModal(true)}
+               className="flex items-center gap-3 bg-white/8 hover:bg-white/15 rounded-xl px-3 py-2.5 mb-2 cursor-pointer transition-colors"
+               title="Edit Profile">
             <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0">
               <User size={14} className="text-teal-300" />
             </div>
@@ -344,7 +429,9 @@ export default function CoordinatorSyllabi() {
                     </thead>
                     <tbody className="divide-y divide-slate-100/80">
                       {visible.filter(s => s.sem === selectedSemester).map(s => {
-                        const meta = STATUS_META[s.status] || STATUS_META.submitted;
+                        const meta = (s.status === "submitted" && s.is_resubmitted) 
+                                     ? STATUS_META.resubmitted 
+                                     : (STATUS_META[s.status] || STATUS_META.submitted);
                         const Icon = meta.icon;
                         const busy = actionLoading[s._id];
                         return (
@@ -381,7 +468,7 @@ export default function CoordinatorSyllabi() {
                                 
                                 {s.status === "submitted" ? (
                                   <>
-                                    <button onClick={() => handleApprove(s)} disabled={!!busy} title="Approve"
+                                    <button onClick={() => setApproveModal(s)} disabled={!!busy} title="Approve"
                                             className="w-8 h-8 rounded-full flex items-center justify-center text-white transition-all cursor-pointer shadow-sm hover:shadow-md disabled:shadow-none disabled:opacity-40 disabled:cursor-not-allowed"
                                             style={{ background: "#059669" }}>
                                       {busy==="approve"
@@ -416,6 +503,59 @@ export default function CoordinatorSyllabi() {
           )}
         </main>
       </div>
+
+      {/* ══ APPROVE MODAL ═════════════════════════════════════════ */}
+      {approveModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+             style={{ background:"rgba(0,0,0,0.5)", backdropFilter:"blur(8px)", animation:"fadeIn .15s ease" }}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+               style={{ animation:"slideUp .2s ease" }}>
+            
+            <div className="px-6 pt-6 pb-5 relative" style={{ background:"linear-gradient(135deg,#ecfdf5,white)" }}>
+              <button onClick={() => setApproveModal(null)}
+                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 cursor-pointer">
+                <X size={14} className="text-slate-500" />
+              </button>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center mb-3">
+                <CheckCircle size={22} className="text-emerald-600" />
+              </div>
+              <h2 className="text-xl font-extrabold text-slate-800">Approve Syllabus</h2>
+              <p className="text-sm text-slate-500 mt-0.5">
+                <span className="font-semibold text-slate-700">{approveModal.subject_name}</span>
+              </p>
+            </div>
+
+            <div className="px-6 py-5">
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex gap-2 mb-4">
+                <FileCheck2 size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Approving will automatically embed the official barcode, upload the finalized PDF, and email it to 
+                  <span className="font-bold text-slate-700 ml-1">{user?.email || "your stored email address"}</span>.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button onClick={() => setApproveModal(null)}
+                        className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer">
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmApprove}
+                  disabled={submitting}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white
+                             flex items-center justify-center gap-2 transition-all cursor-pointer hover:-translate-y-0.5"
+                  style={{ background: "#059669", boxShadow: "0 6px 20px #05966933" }}
+                >
+                  {submitting
+                    ? <><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />Approving…</>
+                    : <><CheckCircle size={14} />Confirm Approve</>
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ REJECT MODAL ═════════════════════════════════════════ */}
       {rejectModal && (

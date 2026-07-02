@@ -1,6 +1,4 @@
-// pages/faculty/Submitted.jsx — fully dynamic
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CheckCircle, XCircle, Clock, FileText,
@@ -8,6 +6,7 @@ import {
   GraduationCap, LayoutDashboard, LogOut,
   User, Menu, X
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -41,7 +40,20 @@ export default function FacultySubmitted() {
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState("");
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    // ── Handle return from syllabus generator after resubmit ──
+    const params       = new URLSearchParams(window.location.search);
+    const pdfUrl       = params.get("pdf_url");
+    const assignmentId = params.get("assignmentId");
+
+    if (pdfUrl && assignmentId) {
+      // Clean the URL immediately so refresh doesn't re-trigger
+      window.history.replaceState({}, "", window.location.pathname);
+      submitResubmission(assignmentId, pdfUrl);
+    } else {
+      fetchData();
+    }
+  }, []);
 
   async function fetchData() {
     setLoading(true); setError("");
@@ -62,6 +74,30 @@ export default function FacultySubmitted() {
     }
   }
 
+  // ── Called after returning from the syllabus generator ────────────
+  async function submitResubmission(assignmentId, pdfUrl) {
+    setLoading(true);
+    try {
+      // Backend fetches the PDF and re-uploads it to a fresh Cloudinary URL
+      const res  = await fetch(`${API_URL}/api/v1/submit`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignmentId, pdf_url: pdfUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      toast.success("Syllabus resubmitted with updated PDF!");
+      // Re-fetch to get the fresh Cloudinary URL stored by backend
+      await fetchData();
+    } catch (err) {
+      toast.error("Failed to save resubmission: " + err.message);
+      fetchData();
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleLogout() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
   }
@@ -74,7 +110,8 @@ export default function FacultySubmitted() {
     .filter(s =>
       s.subject_name?.toLowerCase().includes(search.toLowerCase()) ||
       s.subject_code?.toLowerCase().includes(search.toLowerCase())
-    );
+    )
+    .sort((a, b) => new Date(b.submitted_at || b.createdAt) - new Date(a.submitted_at || a.createdAt));
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fb]"
@@ -298,15 +335,17 @@ export default function FacultySubmitted() {
                             {s.status === "rejected" && (
                               <button
                                 onClick={() => {
+                                  const SYLLABUS_URL = (import.meta.env.VITE_SYLLABUS_URL || "https://syllabus-gen-integrated.netlify.app").replace(/\/$/, "");
                                   const params = new URLSearchParams({
                                     assignmentId: s._id,
                                     subjectCode:  s.subject_code,
                                     subjectName:  s.subject_name,
-                                    sem:          s.sem,
-                                    department:   user?.department,
-                                    facultyName:  user?.name,
+                                    sem:          String(s.sem),
+                                    department:   user?.department || "",
+                                    faculty:      user?.name || "",
+                                    callbackUrl:  window.location.origin + "/faculty/submitted",
                                   });
-                                  window.open(`${import.meta.env.VITE_SYLLABUS_URL || "http://localhost:5174"}?${params}`, "_blank");
+                                  window.location.href = `${SYLLABUS_URL}/?${params.toString()}`;
                                 }}
                                 title="Re-edit & Resubmit"
                                 className="w-8 h-8 rounded-lg bg-red-50 border border-red-100

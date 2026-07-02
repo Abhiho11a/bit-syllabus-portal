@@ -6,8 +6,9 @@ import {
   LayoutDashboard, FileText, LogOut, User,
   Menu, X, CheckCircle, Clock, XCircle,
   ArrowRight, TrendingUp, Eye, Users, RefreshCw,
-  GitMerge, FileCheck2
+  GitMerge, FileCheck2, Plus
 } from "lucide-react";
+import ProfileEditModal from "../../components/ProfileEditModal";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -20,6 +21,7 @@ const STATUS_META = {
 
 const NAV_LINKS = [
   { label:"Dashboard", path:"/coordinator/dashboard", icon: LayoutDashboard },
+  { label:"Assign",    path:"/coordinator/assign",    icon: Plus },
   { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText         },
   { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
   { label:"Manual Approve", path:"/coordinator/manual-approve", icon: FileCheck2 },
@@ -30,6 +32,7 @@ export default function CoordinatorDashboard() {
   const user     = JSON.parse(localStorage.getItem("user"));
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [allData,     setAllData]     = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState("");
@@ -132,7 +135,9 @@ export default function CoordinatorDashboard() {
         </nav>
 
         <div className="px-4 py-4 border-t border-white/10">
-          <div className="flex items-center gap-3 bg-white/8 rounded-xl px-3 py-2.5 mb-2">
+          <div onClick={() => setShowProfileModal(true)}
+               className="flex items-center gap-3 bg-white/8 hover:bg-white/15 rounded-xl px-3 py-2.5 mb-2 cursor-pointer transition-colors"
+               title="Edit Profile">
             <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0">
               <User size={14} className="text-teal-300" />
             </div>
@@ -363,6 +368,11 @@ export default function CoordinatorDashboard() {
           </div>
         </main>
       </div>
+      
+      {/* ══ PROFILE MODAL ══════════════════════════════════════════ */}
+      {showProfileModal && (
+        <ProfileEditModal user={user} onClose={() => setShowProfileModal(false)} />
+      )}
     </div>
   );
 }

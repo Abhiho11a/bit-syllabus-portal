@@ -8,6 +8,7 @@ import Assignment from "./models/assignmentModel.js"
 import Activity from "./models/activityModel.js"
 import bcrypt from "bcryptjs"
 import mongoose from "mongoose"
+import nodemailer from "nodemailer"
 
 const app = express();
 app.use(express.json());
@@ -66,6 +67,7 @@ app.post("/api/v1/auth/login", async (req, res) => {
         department:   user.department,
         subject_code: user.subject_code,
         subject_name: user.subject_name,
+        email:        user.email,
       }
     });
 
@@ -231,6 +233,48 @@ app.patch("/api/v1/users/:id", async (req, res) => {
     });
   }
 });
+
+// EDIT User details (Name and Password)
+app.patch("/api/v1/users/:id/edit", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, password, email } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ status: "Fail", message: "User not found" });
+    }
+
+    if (name) {
+      user.name = name.trim();
+    }
+    if (email !== undefined) {
+      user.email = email ? email.trim().toLowerCase() : null;
+    }
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({ status: "Fail", message: "Password must be at least 6 characters." });
+      }
+      user.password = password; // pre-save hook will hash this
+    }
+
+    await user.save();
+
+    // Strip password
+    const { password: _, ...userWithoutPassword } = user.toObject();
+
+    return res.status(200).json({
+      status: "Success",
+      message: "User updated successfully",
+      user: userWithoutPassword
+    });
+
+  } catch (err) {
+    console.error("Edit user error:", err);
+    return res.status(500).json({ status: "Fail", message: "Server error" });
+  }
+});
+
 //FETCH assignments
 app.get("/api/v1/assignments", async (req, res) => {
   try {
@@ -378,19 +422,25 @@ app.patch("/api/v1/submit",async(req,res)=>{
       return res.status(400).json({ message: "assignmentId is required." });
     }
 
-    const assignment = await Assignment.findByIdAndUpdate(
-      assignmentId,
-      {
-        status:       "submitted",
-        pdf_url:      pdf_url || null,
-        submitted_at: new Date(),
-      },
-      { new: true }
-    );
+    const assignment = await Assignment.findById(assignmentId);
 
     if (!assignment) {
       return res.status(404).json({ message: "Assignment not found." });
     }
+
+    if (assignment.status === "rejected" || assignment.status === "submitted") {
+      assignment.is_resubmitted = true;
+    }
+
+    assignment.status = "submitted";
+    assignment.submitted_at = new Date();
+
+    if (pdf_url) {
+      assignment.pdf_url = pdf_url;
+    }
+
+    await assignment.save();
+    console.log(`[SUBMIT] ${assignmentId} — status=submitted, pdf_url=${assignment.pdf_url}`);
 
     return res.status(200).json({
       status:  "Success",
@@ -408,7 +458,7 @@ app.patch("/api/v1/submit",async(req,res)=>{
 // PATCH /api/v1/assignments/:id/review
 app.patch("/api/v1/assignments/:id/review", async (req, res) => {
   try {
-    const { status, remark, pdf_url } = req.body;  // ← add pdf_url
+    const { status, remark, pdf_url, target_email } = req.body;  // ← add target_email
 
     if (!["approved", "rejected"].includes(status)) {
       return res.status(400).json({ message: "Status must be 'approved' or 'rejected'." });
@@ -423,11 +473,40 @@ app.patch("/api/v1/assignments/:id/review", async (req, res) => {
       return res.status(404).json({ message: "Assignment not found." });
     }
 
-    // ← REMOVED the strict "must be submitted" check so dean can approve too
     assignment.status = status;
     assignment.remark = remark?.trim() || "";
-    if (pdf_url) assignment.pdf_url = pdf_url;  // ← save new Cloudinary URL
+    if (pdf_url) assignment.pdf_url = pdf_url;
+    assignment.is_resubmitted = false; // clear flag after coordinator action
     await assignment.save();
+
+    // EMAIL LOGIC
+    if (status === "approved" && target_email && pdf_url) {
+      try {
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+          }
+        });
+
+        await transporter.sendMail({
+          from: `"Syllabus Portal" <${process.env.EMAIL_USER}>`,
+          to: target_email,
+          subject: `Approved Syllabus: ${assignment.subject_name}`,
+          text: `Hello,\n\nThe syllabus for ${assignment.subject_name} (${assignment.subject_code}) has been officially approved.\n\nPlease find the approved and barcoded document attached to this email.\n\nBest regards,\nCoordinator`,
+          attachments: [
+            {
+              filename: `Approved_${assignment.subject_code}.pdf`,
+              path: pdf_url // Automatically streams the PDF from Cloudinary URL
+            }
+          ]
+        });
+        console.log(`Email sent successfully to ${target_email}`);
+      } catch (emailErr) {
+        console.error("Failed to send approval email:", emailErr);
+      }
+    }
 
     return res.status(200).json({
       status:  "Success",
@@ -454,8 +533,8 @@ app.get("/api/v1/bos",async(req,res) => {
 })
 app.get("/api/v1/faculty",async(req,res) => {
   try{
-    const bosLists = await User.find({role:"faculty"})
-    res.status(200).json({status:"Success",message:"All Bos Fetched",bos:bosLists})
+    const facultyLists = await User.find({role:"faculty"})
+    res.status(200).json({status:"Success",message:"All Faculty Fetched",faculty:facultyLists})
   }catch(err)
   {
     res.status(500).json({status:"Fail",message:err.message})
@@ -501,7 +580,7 @@ app.get("/api/v1/allusers",async(req,res) => {
 // add users it may be fac or bos or dean or coordinator
 app.post("/api/v1/allusers", async (req, res) => {
   try {
-    const { name, password, role, department } = req.body;
+    const { name, password, role, department, email } = req.body;
 
     // ── 1. Validate required fields ──────────────────────────────
     if (!name || !password || !role) {
@@ -554,6 +633,7 @@ app.post("/api/v1/allusers", async (req, res) => {
       name,
       password,   // bcrypt fires via pre("save") hook in User schema
       role,
+      email: email ? email.trim().toLowerCase() : null,
     };
 
     // Only set department for roles that need it

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect } from "react";
 import { useMemo } from "react";
+import toast from "react-hot-toast";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -41,31 +42,31 @@ export default function AdminDashboard() {
   },[])
 
   async function fetchAllUsers(){
-    const response = await fetch(`${API_URL}/api/v1/allusers`)
+    const fetchPromise = fetch(`${API_URL}/api/v1/allusers`).then(async res => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      return data;
+    });
 
-    const data = await response.json();
-
-    if(!response.ok)
-        alert(data.message)
-    else
-    {
-        // alert("All users fetched")
-        console.log(data.users)
-        setUsers(data.users)
-    }
+    toast.promise(fetchPromise, {
+      loading: 'Fetching users...',
+      success: 'Users fetched successfully!',
+      error: err => err.message || 'Failed to fetch users'
+    }).then(data => setUsers(data.users)).catch(() => {});
   }
   
   async function fetchAssignmentCnt() {
-    try {
-      // Admin fetches ALL — no filter
-      const res  = await fetch(`${API_URL}/api/v1/assignments`);
+    const fetchPromise = fetch(`${API_URL}/api/v1/assignments`).then(async res => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch");
-      setSyllabi(data.assignments)
-    } catch (err) {
-      console.error(err);
-      alert("Failed to load syllabi.");
-    }
+      return data;
+    });
+
+    toast.promise(fetchPromise, {
+      loading: 'Fetching assignments...',
+      success: 'Assignments fetched successfully!',
+      error: err => err.message || 'Failed to load syllabi'
+    }).then(data => setSyllabi(data.assignments)).catch(() => {});
   }
 
   const stats = useMemo(() => {

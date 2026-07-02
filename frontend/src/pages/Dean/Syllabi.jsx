@@ -10,8 +10,8 @@ import {
   Clock, RefreshCw, Send, AlertCircle, FileCheck2,
   ArrowLeft, Folder
 } from "lucide-react";
-import barcodeImg from "../../assets/barcode.jpeg"
 import { PDFDocument, rgb } from "pdf-lib";
+import toast from "react-hot-toast";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -237,7 +237,7 @@ async function handleApprove(s) {
 
   } catch (err) {
     console.error(err);
-    alert("Approval failed: " + err.message);
+    toast.error("Approval failed: " + err.message);
   } finally {
     setActionLoading(l => ({ ...l, [s._id]: null }));
   }
@@ -255,7 +255,7 @@ async function handleApprove(s) {
       if (!res.ok) throw new Error(data.message);
       setSyllabi(prev => prev.map(a => a._id === rejectModal._id ? { ...a, status:"rejected", remark } : a));
       setRejectModal(null); setRemark("");
-    } catch (err) { alert("Failed: " + err.message); }
+    } catch (err) { toast.error("Failed: " + err.message); }
     finally { setSubmitting(false); }
   }
 

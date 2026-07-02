@@ -10,6 +10,7 @@ import {
   XCircle, RefreshCw, UserCircle, Building2,
   GitMerge
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -107,7 +108,7 @@ async function handleDelete(id) {
     setData(prev => prev.filter(a => a._id !== id));
   } catch (err) {
     console.error(err);
-    alert("Delete failed: " + err.message);
+    toast.error("Delete failed: " + err.message);
   } finally {
     // setIsDeleting(false);
   }

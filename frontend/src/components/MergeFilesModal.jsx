@@ -10,6 +10,7 @@ import headerFull from "../assets/header_img.png";
 import logo from "../assets/logo.png";
 import barcodeImg from '../assets/barcode.jpeg'
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function MergeFilesModal() {
   const [files,            setFiles]           = useState([]);
@@ -569,7 +570,7 @@ async function mergePDFs(pdfFiles) {
   return;
 }
 
-    if (files.length < 2) { alert("Add at least 2 files to merge!"); return; }
+    if (files.length < 2) { toast.error("Add at least 2 files to merge!"); return; }
 
     setMerging(true);
     const converted = [];

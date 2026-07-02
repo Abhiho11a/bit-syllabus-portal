@@ -1,4 +1,5 @@
 import { Route , Routes } from "react-router-dom"
+import { Toaster } from "react-hot-toast"
 import "./App.css"
 import Home from "./Home"
 import Login from "./pages/Login"
@@ -22,6 +23,7 @@ import AdminSyllabi from "./pages/Admin/Syllabi"
 import MergeFilesModal from "./components/MergeFilesModal"
 import DeanManualApprove from "./pages/Dean/ManualApprove"
 import CoordinatorManualApprove from "./pages/Coordinator/ManualApprove"
+import CoordinatorAssign from "./pages/Coordinator/Assign"
 import Stats from "./pages/Admin/Stats"
 import useActivityLogger from "./hooks/useActivityLogger"
 
@@ -29,6 +31,13 @@ export default function App(){
   useActivityLogger();
   return(
     <div>
+      <Toaster 
+        position="top-right" 
+        toastOptions={{
+          className: 'text-sm font-bold shadow-lg border border-slate-100 rounded-2xl',
+          style: { fontFamily: "'Figtree', 'Segoe UI', sans-serif" }
+        }} 
+      />
 
       <Routes>
         <Route path="/" element={<Home/>}/>
@@ -49,6 +58,7 @@ export default function App(){
         <Route path="/coordinator/dashboard" element={<CoordinatorDashboard/>}/>
         <Route path="/coordinator/syllabi" element={<CoordinatorSyllabi/>}/>
         <Route path="/coordinator/manual-approve" element={<CoordinatorManualApprove/>}/>
+        <Route path="/coordinator/assign" element={<CoordinatorAssign/>}/>
 
         {/*  */}
         <Route path="/dean/dashboard" element={<DeanDashboard/>}/>

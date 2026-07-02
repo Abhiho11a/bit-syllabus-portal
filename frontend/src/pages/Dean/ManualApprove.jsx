@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { PDFDocument, rgb } from "pdf-lib";
 import barcodeImg from "../../assets/barcode.jpeg";
+import toast from "react-hot-toast";
 
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/dean/dashboard",      icon: LayoutDashboard },
@@ -37,6 +38,22 @@ export default function DeanManualApprove() {
   function onFileChange(e) {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+    }
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+        setSelectedFile(file);
+      } else {
+        toast.error("Please upload a PDF file.");
+      }
     }
   }
 
@@ -127,9 +144,10 @@ export default function DeanManualApprove() {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+      toast.success("PDF modified and downloaded successfully!");
     } catch (err) {
       console.error(err);
-      alert("Failed to modify PDF. Please ensure it is a valid PDF file.");
+      toast.error("Failed to modify PDF. Please ensure it is a valid PDF file.");
     } finally {
       setProcessing(false);
     }
@@ -219,7 +237,9 @@ export default function DeanManualApprove() {
                 />
                 
                 <label 
-                  htmlFor="pdf-upload" 
+                  htmlFor="pdf-upload"
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop} 
                   className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
                     selectedFile ? "border-amber-500 bg-amber-50" : "border-slate-300 hover:border-amber-400 hover:bg-slate-50"
                   }`}
@@ -241,25 +261,27 @@ export default function DeanManualApprove() {
                   </div>
                 </label>
 
-                <div className="mt-8 flex justify-center">
-                  <button 
-                    onClick={handleApproveAndDownload}
-                    disabled={!selectedFile || processing}
-                    className="flex items-center gap-2 px-8 py-3.5 bg-amber-500 text-white font-bold rounded-xl text-sm md:text-base transition-all hover:bg-amber-600 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
-                  >
-                    {processing ? (
-                      <>
-                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Download size={18} />
-                        Approve & Download PDF
-                      </>
-                    )}
-                  </button>
-                </div>
+                {selectedFile && (
+                  <div className="mt-8 flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <button 
+                      onClick={handleApproveAndDownload}
+                      disabled={!selectedFile || processing}
+                      className="flex items-center gap-2 px-8 py-3.5 bg-amber-500 text-white font-bold rounded-xl text-sm md:text-base transition-all hover:bg-amber-600 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5"
+                    >
+                      {processing ? (
+                        <>
+                          <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Download size={18} />
+                          Approve & Download PDF
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
               
               <div className="bg-slate-50 px-8 py-4 border-t border-slate-100 flex items-center justify-center gap-2">

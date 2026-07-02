@@ -1,14 +1,14 @@
 // pages/dean/Faculty.jsx
 // Dean views all faculty across all departments (read-only)
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   LayoutDashboard, FileText, Users, GraduationCap,
   LogOut, User, Menu, X, Shield,
   Search, CheckCircle, AlertCircle, FileCheck2
 } from "lucide-react";
-import { useEffect } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -31,21 +31,22 @@ export default function DeanFaculty() {
   const [facList,setFacList] = useState([])
 
   async function fetchAllFac() {
-      const response = await fetch(`${API_URL}/api/v1/faculty`,{
+      const fetchPromise = fetch(`${API_URL}/api/v1/faculty`,{
           method:"GET",
           headers: {
               "Content-Type": "application/json",
           }
-      })
-      const data = await response.json();
-  
-      if(data.status === "Success")
-      {
-          setFacList(data.bos)
-          alert(data.message)
-      }
-      else
-          alert(data.message)
+      }).then(async res => {
+        const data = await res.json();
+        if (data.status !== "Success") throw new Error(data.message);
+        return data;
+      });
+
+      toast.promise(fetchPromise, {
+        loading: 'Fetching faculty...',
+        success: 'Faculty fetched successfully!',
+        error: err => err.message || 'Failed to fetch faculty'
+      }, { id: 'fetch-faculty' }).then(data => setFacList(data.faculty || data.bos || [])).catch(() => {});
     }
   
     useEffect(()=>{
@@ -56,7 +57,7 @@ export default function DeanFaculty() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
   }
 
-  const visible = facList
+  const visible = (facList || [])
     .filter(f => deptFilter === "All" || f.department === deptFilter)
     .filter(f =>
       (f.name||"").toLowerCase().includes(search.toLowerCase()) ||

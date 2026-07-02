@@ -7,6 +7,7 @@ import {
   GraduationCap, BookOpen,
   GitMerge
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -51,7 +52,7 @@ export default function AdminDepartments() {
 
   async function handleAdd(e) {
     e.preventDefault();
-    if (!form.name || !form.code) { alert("Fill all fields"); return; }
+    if (!form.name || !form.code) { toast.error("Fill all fields"); return; }
     setAdding(true);
     // TODO: POST /api/v1/departments { name, code }
     await new Promise(r => setTimeout(r, 800));
