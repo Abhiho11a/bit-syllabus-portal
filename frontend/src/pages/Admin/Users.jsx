@@ -103,6 +103,29 @@ export default function AdminUsers() {
     }
   }
 
+  async function handleDeleteUser(id, name) {
+    if (!confirm(`Are you sure you want to permanently delete user "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+    
+    const loadingToast = toast.loading(`Deleting ${name}...`);
+    try {
+      const response = await fetch(`${API_URL}/api/v1/allusers/${id}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast.success(data.message, { id: loadingToast });
+        setUsers(l => l.filter(u => u._id !== id));
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      toast.error(err.message || "Failed to delete user", { id: loadingToast });
+    }
+  }
+
   async function handleAdd(e) {
     e.preventDefault();
     if (!form.name || !form.role || !form.password) { toast.error("Fill all required fields"); return; }
@@ -239,6 +262,11 @@ export default function AdminUsers() {
                 ? "bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white"
                 : "bg-green-50 text-green-500 hover:bg-green-500 hover:text-white"}`}>
             {u.is_active ? <X size={14} strokeWidth={2.5} /> : <CheckCircle size={14} strokeWidth={2.5} />}
+          </button>
+          <button onClick={() => handleDeleteUser(u._id, u.name)}
+            title="Delete User"
+            className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm">
+            <Trash2 size={13} strokeWidth={2.5} />
           </button>
         </div>
       </div>

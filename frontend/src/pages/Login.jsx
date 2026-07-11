@@ -331,13 +331,13 @@ export default function Login() {
             </div>
           </div>
 
-          <p className="text-center text-xs text-slate-400 mt-5">
+          {/* <p className="text-center text-xs text-slate-400 mt-5">
             Just browsing?{" "}
             <button onClick={() => navigate("/")}
                     className="text-blue-600 font-semibold hover:underline cursor-pointer">
               Continue as Guest →
             </button>
-          </p>
+          </p> */}
         </div>
       </div>
 

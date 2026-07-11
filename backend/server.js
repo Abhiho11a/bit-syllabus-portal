@@ -667,6 +667,32 @@ app.post("/api/v1/allusers", async (req, res) => {
   }
 });
 
+// DELETE user (Admin only — any role)
+app.delete("/api/v1/allusers/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ status: "Fail", message: "User not found." });
+    }
+
+    // Also remove all assignments linked to this user (as faculty)
+    await Assignment.deleteMany({ faculty_id: id });
+
+    await User.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      status: "Success",
+      message: `User "${user.name}" (${user.role}) permanently deleted.`,
+    });
+
+  } catch (err) {
+    console.error("[DELETE /allusers/:id]", err);
+    return res.status(500).json({ status: "Fail", message: "Server error." });
+  }
+});
+
 // ── STATS ROUTES ────────────────────────────────────────────────
 app.post("/api/v1/stats/log", async (req, res) => {
   try {
