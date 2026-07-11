@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, FileText, Users, GraduationCap,
@@ -8,6 +8,9 @@ import {
 import { PDFDocument, rgb } from "pdf-lib";
 import barcodeImg from "../../assets/barcode.jpeg";
 import toast from "react-hot-toast";
+import ProfileEditModal from "../../components/ProfileEditModal";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const NAV_LINKS = [
   { label:"Dashboard",   path:"/dean/dashboard",      icon: LayoutDashboard },
@@ -30,6 +33,14 @@ export default function DeanManualApprove() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [processing, setProcessing] = useState(false);
   const fileInputRef = useRef(null);
+  const [barcodeUrl, setBarcodeUrl] = useState("");
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/v1/settings/barcode_url`)
+      .then(res => res.json())
+      .then(data => { if (data && data.value) setBarcodeUrl(data.value); })
+      .catch(console.error);
+  }, []);
 
   function handleLogout() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
@@ -65,7 +76,12 @@ export default function DeanManualApprove() {
       const pdfDoc = await PDFDocument.load(fileBytes, { ignoreEncryption: true });
       const pages = pdfDoc.getPages();
 
-      const barcodeBytes = await loadBarcodeBytes(barcodeImg);
+      if (!barcodeUrl) {
+        toast.error("Please configure the barcode image in Settings first!");
+        setProcessing(false);
+        return;
+      }
+      const barcodeBytes = await loadBarcodeBytes(barcodeUrl);
       const barcodeImage = await pdfDoc.embedJpg(barcodeBytes);
 
       const formatted = new Date().toLocaleString("en-IN", {

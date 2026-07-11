@@ -10,6 +10,7 @@ import {
 import toast from "react-hot-toast";
 
 const API_URL = import.meta.env.VITE_API_URL;
+const SYLLABUS_URL = (import.meta.env.VITE_SYLLABUS_URL || "http://localhost:5174").replace(/\/$/, "");
 
 const NAV_LINKS = [
   { label:"Dashboard",     path:"/faculty/dashboard", icon: LayoutDashboard },
@@ -121,9 +122,17 @@ export default function FacultyPending() {
   const [loading,     setLoading]     = useState(true);
   const [submitting,  setSubmitting]  = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(null);
+  const [barcodeUrl, setBarcodeUrl] = useState("");
 
   // PDF Viewer state
   const [pdfModal, setPdfModal] = useState({ isOpen: false, url: "", taskName: "" });
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/v1/settings/barcode_url`)
+      .then(r => r.json())
+      .then(d => { if (d && d.value) setBarcodeUrl(d.value); })
+      .catch(e => console.error(e));
+  }, []);
 
   // ── Fetch all pending assignments (exclude approved) ─────────
   function fetchAssignments() {
@@ -195,7 +204,8 @@ export default function FacultyPending() {
       department:   assignment.department || user?.department || "",
       callbackUrl:  window.location.origin + "/faculty/pending",
     });
-    window.location.href = `https://syllabus-gen-integrated.netlify.app/?${params.toString()}`;
+    if (barcodeUrl) params.append("barcodeUrl", barcodeUrl);
+    window.location.href = `${SYLLABUS_URL}/?${params.toString()}`;
   }
 
   // ── Refill syllabus (for submitted assignments) ───────────────
@@ -209,7 +219,8 @@ export default function FacultyPending() {
       department:   assignment.department || user?.department || "",
       callbackUrl:  window.location.origin + "/faculty/pending",
     });
-    window.location.href = `https://syllabus-gen-integrated.netlify.app/?${params.toString()}`;
+    if (barcodeUrl) params.append("barcodeUrl", barcodeUrl);
+    window.location.href = `${SYLLABUS_URL}/?${params.toString()}`;
   }
 
   // ── View submitted PDF ─────────────────────────────────────────

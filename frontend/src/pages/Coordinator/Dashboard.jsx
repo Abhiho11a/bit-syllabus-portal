@@ -6,7 +6,7 @@ import {
   LayoutDashboard, FileText, LogOut, User,
   Menu, X, CheckCircle, Clock, XCircle,
   ArrowRight, TrendingUp, Eye, Users, RefreshCw,
-  GitMerge, FileCheck2, Plus
+  GitMerge, FileCheck2, Plus, Settings
 } from "lucide-react";
 import ProfileEditModal from "../../components/ProfileEditModal";
 
@@ -25,6 +25,7 @@ const NAV_LINKS = [
   { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText         },
   { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
   { label:"Manual Approve", path:"/coordinator/manual-approve", icon: FileCheck2 },
+  { label:"Settings",        path:"/coordinator/settings",      icon: Settings },
 ];
 
 export default function CoordinatorDashboard() {

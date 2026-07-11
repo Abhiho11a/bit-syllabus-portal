@@ -39,6 +39,7 @@ export default function FacultySubmitted() {
   const [syllabi, setSyllabi]         = useState([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState("");
+  const [barcodeUrl, setBarcodeUrl]   = useState("");
 
   useEffect(() => {
     // ── Handle return from syllabus generator after resubmit ──
@@ -53,6 +54,11 @@ export default function FacultySubmitted() {
     } else {
       fetchData();
     }
+
+    fetch(`${API_URL}/api/v1/settings/barcode_url`)
+      .then(r => r.json())
+      .then(d => { if (d && d.value) setBarcodeUrl(d.value); })
+      .catch(e => console.error(e));
   }, []);
 
   async function fetchData() {
@@ -335,7 +341,7 @@ export default function FacultySubmitted() {
                             {s.status === "rejected" && (
                               <button
                                 onClick={() => {
-                                  const SYLLABUS_URL = (import.meta.env.VITE_SYLLABUS_URL || "https://syllabus-gen-integrated.netlify.app").replace(/\/$/, "");
+                                  const SYLLABUS_URL = (import.meta.env.VITE_SYLLABUS_URL || "http://localhost:5174").replace(/\/$/, "");
                                   const params = new URLSearchParams({
                                     assignmentId: s._id,
                                     subjectCode:  s.subject_code,
@@ -345,6 +351,7 @@ export default function FacultySubmitted() {
                                     faculty:      user?.name || "",
                                     callbackUrl:  window.location.origin + "/faculty/submitted",
                                   });
+                                  if (barcodeUrl) params.append("barcodeUrl", barcodeUrl);
                                   window.location.href = `${SYLLABUS_URL}/?${params.toString()}`;
                                 }}
                                 title="Re-edit & Resubmit"

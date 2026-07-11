@@ -6,6 +6,7 @@ import cors from "cors"
 import User from "./models/userModel.js"
 import Assignment from "./models/assignmentModel.js"
 import Activity from "./models/activityModel.js"
+import Settings from "./models/settingsModel.js"
 import bcrypt from "bcryptjs"
 import mongoose from "mongoose"
 import nodemailer from "nodemailer"
@@ -31,14 +32,18 @@ app.post("/api/v1/auth/login", async (req, res) => {
     // build query based on role
     const query = { role, is_active: true };
 
+    // Escape name for regex to prevent regex injection
+    const escapedName = name ? name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') : "";
+    const nameRegex = { $regex: `^${escapedName}$`, $options: "i" };
+
     if (role === "faculty") {
-      query.name         = name;
+      query.name         = nameRegex;
       query.department   = department?.toUpperCase();
     } else if (role === "bos" || role === "autonomous_coordinator" || role === "coordinator") {
-      query.name       = name;
+      query.name       = nameRegex;
       query.department = department?.toUpperCase();
     } else if (role === "dean") {
-      query.name = name;
+      query.name = nameRegex;
     } else if (role === "admin") {
       query.email = email?.toLowerCase();
     }
@@ -700,6 +705,36 @@ app.get("/api/v1/stats", async (req, res) => {
   } catch (err) {
     console.error("[stats error]", err);
     return res.status(500).json({ message: "Server error." });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────────────────────────────
+app.get("/api/v1/settings/:key", async (req, res) => {
+  try {
+    const setting = await Settings.findOne({ key: req.params.key });
+    if (!setting) return res.status(404).json({ message: "Setting not found" });
+    res.json(setting);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+app.post("/api/v1/settings", async (req, res) => {
+  try {
+    const { key, value } = req.body;
+    if (!key || !value) {
+      return res.status(400).json({ message: "Key and value are required" });
+    }
+    const setting = await Settings.findOneAndUpdate(
+      { key },
+      { value },
+      { new: true, upsert: true }
+    );
+    res.json(setting);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 

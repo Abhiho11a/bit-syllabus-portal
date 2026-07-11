@@ -7,7 +7,7 @@ import {
   LayoutDashboard, FileText, Plus,
   LogOut, User, Menu, X, BookOpen,
   Send, ChevronLeft, CheckCircle, UserCircle, Building2,
-  GitMerge, FileCheck2, Users
+  GitMerge, FileCheck2, Users, Settings
 } from "lucide-react";
 import ProfileEditModal from "../../components/ProfileEditModal";
 
@@ -19,6 +19,7 @@ const NAV_LINKS = [
   { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText },
   { label:"Merge Files", path:"/mergefiles",          icon: GitMerge },
   { label:"Manual Approve", path:"/coordinator/manual-approve", icon: FileCheck2 },
+  { label:"Settings",  path:"/coordinator/settings",  icon: Settings },
 ];
 
 const FACULTY_VIEWS = [

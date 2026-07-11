@@ -24,6 +24,7 @@ import MergeFilesModal from "./components/MergeFilesModal"
 import DeanManualApprove from "./pages/Dean/ManualApprove"
 import CoordinatorManualApprove from "./pages/Coordinator/ManualApprove"
 import CoordinatorAssign from "./pages/Coordinator/Assign"
+import CoordinatorSettings from "./pages/Coordinator/Settings"
 import Stats from "./pages/Admin/Stats"
 import useActivityLogger from "./hooks/useActivityLogger"
 
@@ -58,6 +59,7 @@ export default function App(){
         <Route path="/coordinator/dashboard" element={<CoordinatorDashboard/>}/>
         <Route path="/coordinator/syllabi" element={<CoordinatorSyllabi/>}/>
         <Route path="/coordinator/manual-approve" element={<CoordinatorManualApprove/>}/>
+        <Route path="/coordinator/settings" element={<CoordinatorSettings/>}/>
         <Route path="/coordinator/assign" element={<CoordinatorAssign/>}/>
 
         {/*  */}

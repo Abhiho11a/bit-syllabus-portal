@@ -5,7 +5,7 @@ import {
   Menu, X, Users, Search, Eye,
   CheckCircle, XCircle, Clock, RefreshCw,
   Send, AlertCircle,
-  GitMerge, FileCheck2, ArrowLeft, Folder, Plus
+  GitMerge, FileCheck2, ArrowLeft, Folder, Plus, Settings
 } from "lucide-react";
 import { PDFDocument, rgb } from "pdf-lib";
 import barcodeImg from "../../assets/barcode.jpeg";
@@ -34,6 +34,7 @@ const NAV_LINKS = [
   { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText         },
   { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
   { label:"Manual Approve", path:"/coordinator/manual-approve", icon: FileCheck2 },
+  { label:"Settings",        path:"/coordinator/settings",      icon: Settings },
 ];
 
 export default function CoordinatorSyllabi() {
@@ -61,8 +62,15 @@ export default function CoordinatorSyllabi() {
 
   // ── Per-card action loading ──────────────────────────────────
   const [actionLoading, setActionLoading] = useState({});
+  const [barcodeUrl, setBarcodeUrl] = useState("");
 
-  useEffect(() => { fetchSyllabi(); }, []);
+  useEffect(() => {
+    fetchSyllabi();
+    fetch(`${API_URL}/api/v1/settings/barcode_url`)
+      .then(res => res.json())
+      .then(data => { if (data && data.value) setBarcodeUrl(data.value); })
+      .catch(console.error);
+  }, []);
 
   async function fetchSyllabi() {
     setLoading(true); setError("");
@@ -86,10 +94,10 @@ export default function CoordinatorSyllabi() {
     const pdfFile = new File([pdfBlob], `approved_${assignmentId}.pdf`, { type: "application/pdf" });
     const fd = new FormData();
     fd.append("file", pdfFile);
-    fd.append("upload_preset", "v1conote");
+    fd.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "v1conote");
     fd.append("folder", "syllabi");
     fd.append("public_id", `approved_${assignmentId}`);
-    const cloudRes = await fetch("https://api.cloudinary.com/v1_1/dxsgtzp7i/image/upload", { method: "POST", body: fd });
+    const cloudRes = await fetch(import.meta.env.VITE_CLOUDINARY_UPLOAD_URL || "https://api.cloudinary.com/v1_1/dxsgtzp7i/image/upload", { method: "POST", body: fd });
     const cloudData = await cloudRes.json();
     if (!cloudData.secure_url) throw new Error("Cloudinary upload failed");
     let pdfUrl = cloudData.secure_url;
@@ -118,7 +126,13 @@ export default function CoordinatorSyllabi() {
       const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
       const pages  = pdfDoc.getPages();
 
-      const barcodeBytes = await loadBarcodeBytes(barcodeImg);
+      if (!barcodeUrl) {
+        toast.error("Please configure the barcode image in Settings first!");
+        setSubmitting(false);
+        setActionLoading(l => ({ ...l, [s._id]:false }));
+        return;
+      }
+      const barcodeBytes = await loadBarcodeBytes(barcodeUrl);
       const barcodeImage = await pdfDoc.embedJpg(barcodeBytes);
 
       const formatted = new Date().toLocaleString("en-IN", {

@@ -1,15 +1,17 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, FileText, Users,
   LogOut, User, Menu, X, FileCheck2,
   Upload, Download, FilePlus2, CheckCircle2,
-  GitMerge, Plus
+  GitMerge, Plus, Settings
 } from "lucide-react";
 import { PDFDocument, rgb } from "pdf-lib";
 import barcodeImg from "../../assets/barcode.jpeg";
 import toast from "react-hot-toast";
 import ProfileEditModal from "../../components/ProfileEditModal";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const NAV_LINKS = [
   { label:"Dashboard", path:"/coordinator/dashboard", icon: LayoutDashboard },
@@ -17,6 +19,7 @@ const NAV_LINKS = [
   { label:"Syllabi",   path:"/coordinator/syllabi",   icon: FileText         },
   { label:"Merge Files",     path:"/mergefiles",     icon: GitMerge           },
   { label:"Manual Approve", path:"/coordinator/manual-approve", icon: FileCheck2 },
+  { label:"Settings",        path:"/coordinator/settings",      icon: Settings },
 ];
 
 async function loadBarcodeBytes(src) {
@@ -33,6 +36,14 @@ export default function CoordinatorManualApprove() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [processing, setProcessing] = useState(false);
   const fileInputRef = useRef(null);
+  const [barcodeUrl, setBarcodeUrl] = useState("");
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/v1/settings/barcode_url`)
+      .then(res => res.json())
+      .then(data => { if (data && data.value) setBarcodeUrl(data.value); })
+      .catch(console.error);
+  }, []);
 
   function handleLogout() {
     if (confirm("Log out?")) { localStorage.removeItem("user"); navigate("/login"); }
@@ -68,7 +79,12 @@ export default function CoordinatorManualApprove() {
       const pdfDoc = await PDFDocument.load(fileBytes, { ignoreEncryption: true });
       const pages = pdfDoc.getPages();
 
-      const barcodeBytes = await loadBarcodeBytes(barcodeImg);
+      if (!barcodeUrl) {
+        toast.error("Please configure the barcode image in Settings first!");
+        setProcessing(false);
+        return;
+      }
+      const barcodeBytes = await loadBarcodeBytes(barcodeUrl);
       const barcodeImage = await pdfDoc.embedJpg(barcodeBytes);
 
       const formatted = new Date().toLocaleString("en-IN", {

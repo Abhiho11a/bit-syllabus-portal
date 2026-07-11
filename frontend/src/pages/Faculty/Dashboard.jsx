@@ -10,6 +10,7 @@ import {
 import { useState, useEffect } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL;
+const SYLLABUS_URL = (import.meta.env.VITE_SYLLABUS_URL || "http://localhost:5174").replace(/\/$/, "");
 
 const NAV_LINKS = [
   { label:"Dashboard",     path:"/faculty/dashboard", icon: LayoutDashboard },
@@ -299,7 +300,7 @@ export default function FacultyDashboard() {
                           department:   task.department || user?.department || "",
                           callbackUrl:  window.location.origin + "/faculty/pending",
                         });
-                        window.location.href = `https://syllabus-gen-integrated.netlify.app/?${params.toString()}`;
+                        window.location.href = `${SYLLABUS_URL}/?${params.toString()}`;
                       }}
                       className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg
                                  bg-[#0f2744] text-white hover:bg-[#1e3a5f]

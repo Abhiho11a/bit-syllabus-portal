@@ -53,6 +53,7 @@ export default function DeanSyllabi() {
   const [actionLoading, setActionLoading] = useState({});
   const [depts,         setDepts]         = useState(["All"]);
   const [selectedSemester, setSelectedSemester] = useState(null);
+  const [barcodeUrl,    setBarcodeUrl]    = useState("");
 
   // Reject modal
   const [rejectModal, setRejectModal] = useState(null);
@@ -61,6 +62,10 @@ export default function DeanSyllabi() {
 
   useEffect(() => { 
     fetchSyllabi(); 
+    fetch(`${API_URL}/api/v1/settings/barcode_url`)
+      .then(res => res.json())
+      .then(data => { if (data && data.value) setBarcodeUrl(data.value); })
+      .catch(console.error);
   }, []);
 
   async function fetchSyllabi() {
@@ -114,12 +119,12 @@ async function uploadPDFToCloudinary(pdfBytes, assignmentId) {
 
   const fd = new FormData();
   fd.append("file",          pdfFile);
-  fd.append("upload_preset", "v1conote");          // ← your existing preset
+  fd.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "v1conote");
   fd.append("folder",        "syllabi");
   fd.append("public_id",     `approved_${assignmentId}`);
 
   const cloudRes  = await fetch(
-    "https://api.cloudinary.com/v1_1/dxsgtzp7i/image/upload", // ← your cloud name
+    import.meta.env.VITE_CLOUDINARY_UPLOAD_URL || "https://api.cloudinary.com/v1_1/dxsgtzp7i/image/upload",
     { method: "POST", body: fd }
   );
   const cloudData = await cloudRes.json();
@@ -155,8 +160,13 @@ async function handleApprove(s) {
     const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
     const pages  = pdfDoc.getPages();
 
-    // 3. Embed barcode JPEG
-    const barcodeBytes = await loadBarcodeBytes(barcodeImg);
+    if (!barcodeUrl) {
+      toast.error("Please configure the barcode image in Settings first!");
+      setSubmitting(false);
+      setActionLoading(l => ({ ...l, [s._id]:false }));
+      return;
+    }
+    const barcodeBytes = await loadBarcodeBytes(barcodeUrl);
     const barcodeImage = await pdfDoc.embedJpg(barcodeBytes); // ✅ .jpeg = embedJpg
 
     // 4. Date stamp
